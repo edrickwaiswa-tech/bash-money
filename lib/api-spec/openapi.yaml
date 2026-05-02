@@ -3,20 +3,25 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: SACCO Financial Management API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: members
+    description: Member management
+  - name: transactions
+    description: Transaction management
+  - name: dashboard
+    description: Dashboard summary endpoints
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +29,236 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /members:
+    get:
+      operationId: listMembers
+      tags: [members]
+      summary: List all members
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Member"
+    post:
+      operationId: createMember
+      tags: [members]
+      summary: Create a new member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMemberBody"
+      responses:
+        "201":
+          description: Created member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+
+  /members/{memberId}:
+    get:
+      operationId: getMember
+      tags: [members]
+      summary: Get member details
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Member details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberProfile"
+        "404":
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateMember
+      tags: [members]
+      summary: Update a member
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMemberBody"
+      responses:
+        "200":
+          description: Updated member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+    delete:
+      operationId: deleteMember
+      tags: [members]
+      summary: Delete a member
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+
+  /members/{memberId}/ledger:
+    get:
+      operationId: getMemberLedger
+      tags: [members]
+      summary: Get member ledger with running balance
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Member ledger entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberLedger"
+
+  /transactions:
+    get:
+      operationId: listTransactions
+      tags: [transactions]
+      summary: List all transactions
+      parameters:
+        - name: memberId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TransactionWithMember"
+    post:
+      operationId: createTransaction
+      tags: [transactions]
+      summary: Record a new transaction and get receipt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTransactionBody"
+      responses:
+        "201":
+          description: Transaction receipt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionReceipt"
+
+  /transactions/{transactionId}:
+    get:
+      operationId: getTransaction
+      tags: [transactions]
+      summary: Get a transaction receipt by ID
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Transaction receipt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionReceipt"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get overall financial summary
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/recent-transactions:
+    get:
+      operationId: getRecentTransactions
+      tags: [dashboard]
+      summary: Get recent transactions feed
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Recent transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TransactionWithMember"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +269,253 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    DeleteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    Member:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        idNumber:
+          type: string
+        joinDate:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - phone
+        - idNumber
+        - joinDate
+        - createdAt
+
+    MemberProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        idNumber:
+          type: string
+        joinDate:
+          type: string
+        createdAt:
+          type: string
+        totalSavings:
+          type: number
+          description: Lifetime total credits (savings deposits + loan repayments)
+        outstandingLoan:
+          type: number
+          description: Current outstanding loan balance
+        currentBalance:
+          type: number
+          description: Net balance (credits - debits)
+      required:
+        - id
+        - name
+        - phone
+        - idNumber
+        - joinDate
+        - createdAt
+        - totalSavings
+        - outstandingLoan
+        - currentBalance
+
+    CreateMemberBody:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        idNumber:
+          type: string
+        joinDate:
+          type: string
+      required:
+        - name
+        - phone
+        - idNumber
+
+    LedgerEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        transactionRef:
+          type: string
+        type:
+          type: string
+          enum: [SAVINGS_DEPOSIT, LOAN_REPAYMENT, LOAN_DISBURSEMENT, WITHDRAWAL]
+        amount:
+          type: number
+        direction:
+          type: string
+          enum: [credit, debit]
+        notes:
+          type: string
+        runningBalance:
+          type: number
+        createdAt:
+          type: string
+      required:
+        - id
+        - transactionRef
+        - type
+        - amount
+        - direction
+        - runningBalance
+        - createdAt
+
+    MemberLedger:
+      type: object
+      properties:
+        member:
+          $ref: "#/components/schemas/Member"
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/LedgerEntry"
+        currentBalance:
+          type: number
+        totalCredits:
+          type: number
+        totalDebits:
+          type: number
+      required:
+        - member
+        - entries
+        - currentBalance
+        - totalCredits
+        - totalDebits
+
+    CreateTransactionBody:
+      type: object
+      properties:
+        memberId:
+          type: integer
+        type:
+          type: string
+          enum: [SAVINGS_DEPOSIT, LOAN_REPAYMENT, LOAN_DISBURSEMENT, WITHDRAWAL]
+        amount:
+          type: number
+        notes:
+          type: string
+      required:
+        - memberId
+        - type
+        - amount
+
+    TransactionWithMember:
+      type: object
+      properties:
+        id:
+          type: integer
+        transactionRef:
+          type: string
+        memberId:
+          type: integer
+        memberName:
+          type: string
+        type:
+          type: string
+          enum: [SAVINGS_DEPOSIT, LOAN_REPAYMENT, LOAN_DISBURSEMENT, WITHDRAWAL]
+        direction:
+          type: string
+          enum: [credit, debit]
+        amount:
+          type: number
+        notes:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - transactionRef
+        - memberId
+        - memberName
+        - type
+        - direction
+        - amount
+        - createdAt
+
+    TransactionReceipt:
+      type: object
+      properties:
+        id:
+          type: integer
+        transactionRef:
+          type: string
+        memberId:
+          type: integer
+        memberName:
+          type: string
+        type:
+          type: string
+          enum: [SAVINGS_DEPOSIT, LOAN_REPAYMENT, LOAN_DISBURSEMENT, WITHDRAWAL]
+        direction:
+          type: string
+          enum: [credit, debit]
+        amount:
+          type: number
+        notes:
+          type: string
+        runningBalance:
+          type: number
+        createdAt:
+          type: string
+      required:
+        - id
+        - transactionRef
+        - memberId
+        - memberName
+        - type
+        - direction
+        - amount
+        - runningBalance
+        - createdAt
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalMembers:
+          type: integer
+        totalSavings:
+          type: number
+        totalLoansOutstanding:
+          type: number
+        totalTransactions:
+          type: integer
+        totalDepositsToday:
+          type: number
+        totalWithdrawalsToday:
+          type: number
+      required:
+        - totalMembers
+        - totalSavings
+        - totalLoansOutstanding
+        - totalTransactions
+        - totalDepositsToday
+        - totalWithdrawalsToday

@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "SACCO Financial App"
+version = "1.0.0"
+id = "artifacts/sacco-app"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22215
+
+[services.development]
+run = "pnpm --filter @workspace/sacco-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sacco-app", "run", "build" ]
+publicDir = "artifacts/sacco-app/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22215"
+BASE_PATH = "/"
