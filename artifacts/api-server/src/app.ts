@@ -38,7 +38,6 @@ app.use(
     store: new PgStore({
       conString: process.env.DATABASE_URL,
       tableName: "admin_sessions",
-      createTableIfMissing: true,
     }),
     secret: process.env.SESSION_SECRET ?? "sacco-dev-fallback-secret",
     resave: false,
