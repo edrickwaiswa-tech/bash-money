@@ -9,6 +9,7 @@ import {
   ListTransactionsQueryParams,
 } from "@workspace/api-zod";
 import { requireAdmin } from "../middlewares/auth";
+import { notifyMemberTransaction } from "../lib/notify";
 
 const router = Router();
 
@@ -115,6 +116,16 @@ router.post("/transactions", requireAdmin, async (req, res) => {
       runningBalance,
       createdAt: tx.createdAt.toISOString(),
     });
+
+    // Fire-and-forget WhatsApp alert after response is sent
+    notifyMemberTransaction({
+      memberId: body.memberId,
+      transactionRef,
+      type: tx.type,
+      amount: parseFloat(tx.amount),
+      runningBalance,
+      notes: body.notes,
+    }).catch((err) => req.log.error({ err }, "notify error"));
   } catch (err) {
     req.log.error({ err }, "createTransaction error");
     res.status(500).json({ error: "Internal server error" });
