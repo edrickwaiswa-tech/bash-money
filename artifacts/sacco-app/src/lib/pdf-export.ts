@@ -78,7 +78,7 @@ export function exportMemberStatementPDF(profile: MemberProfile, ledger: MemberL
   doc.setTextColor(...WHITE);
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text("SACCO Ledger", margin + 14, 10);
+  doc.text("NJF Ledger", margin + 14, 10);
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.text("Member Account Statement", margin + 14, 16);
@@ -251,12 +251,12 @@ export function exportMemberStatementPDF(profile: MemberProfile, ledger: MemberL
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     doc.setTextColor(...MUTED);
-    doc.text("SACCO Ledger — Confidential Member Statement", margin, pageH - 7);
+    doc.text("NJF Ledger — Confidential Member Statement", margin, pageH - 7);
     doc.text(`Page ${i} of ${pageCount}`, pageW - margin, pageH - 7, { align: "right" });
   }
 
   // ── Save ─────────────────────────────────────────────────────────────────────
   const safeName = profile.name.replace(/\s+/g, "_").toLowerCase();
   const date = new Date().toISOString().split("T")[0];
-  doc.save(`SACCO_Statement_${safeName}_${date}.pdf`);
+  doc.save(`NJF_Statement_${safeName}_${date}.pdf`);
 }

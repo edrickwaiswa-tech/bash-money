@@ -7,6 +7,7 @@ import { Layout } from "@/components/layout";
 import { ProtectedRoute } from "@/components/protected-route";
 import NotFound from "@/pages/not-found";
 import { Login } from "@/pages/login";
+import { ForgotPin } from "@/pages/forgot-pin";
 import { Dashboard } from "@/pages/dashboard";
 import { MembersList } from "@/pages/members/index";
 import { MemberDetail } from "@/pages/members/[id]";
@@ -17,8 +18,9 @@ const queryClient = new QueryClient();
 function Router() {
   return (
     <Switch>
-      {/* Public auth route — no layout */}
+      {/* Public auth routes — no layout */}
       <Route path="/login" component={Login} />
+      <Route path="/forgot-pin" component={ForgotPin} />
 
       {/* All other routes get the layout */}
       <Route>

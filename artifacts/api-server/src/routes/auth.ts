@@ -1,15 +1,22 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { eq } from "drizzle-orm";
-import { db, adminUsersTable } from "@workspace/db";
+import { db, adminUsersTable, membersTable } from "@workspace/db";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
-router.post("/auth/login", async (req, res): Promise<void> => {
-  const { username, password } = req.body;
+// In-memory OTP and reset-token stores (single-admin, dev-friendly)
+const pendingOtps = new Map<string, { code: string; expiresAt: number }>();
+const resetTokens = new Map<string, { adminId: number; expiresAt: number }>();
 
-  if (!username || !password) {
-    res.status(400).json({ error: "Username and password are required" });
+// ── POST /auth/login (PIN-based) ────────────────────────────────────────────
+router.post("/auth/login", async (req, res): Promise<void> => {
+  const { username, pin } = req.body;
+
+  if (!username || !pin) {
+    res.status(400).json({ error: "Username and PIN are required" });
     return;
   }
 
@@ -23,19 +30,27 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
-  const valid = await bcrypt.compare(password as string, admin.passwordHash);
+  // Primary: check pinHash; fallback to passwordHash if PIN not yet set
+  let valid = false;
+  if (admin.pinHash) {
+    valid = await bcrypt.compare(pin as string, admin.pinHash);
+  } else {
+    valid = await bcrypt.compare(pin as string, admin.passwordHash);
+  }
+
   if (!valid) {
-    res.status(401).json({ error: "Invalid credentials" });
+    res.status(401).json({ error: "Incorrect PIN" });
     return;
   }
 
   req.session.adminId = admin.id;
   req.session.adminUsername = admin.username;
 
-  req.log.info({ adminId: admin.id }, "Admin logged in");
+  req.log.info({ adminId: admin.id }, "Admin signed in");
   res.json({ id: admin.id, username: admin.username, role: "admin" });
 });
 
+// ── POST /auth/logout ───────────────────────────────────────────────────────
 router.post("/auth/logout", async (req, res): Promise<void> => {
   req.session.destroy((err) => {
     if (err) {
@@ -47,12 +62,138 @@ router.post("/auth/logout", async (req, res): Promise<void> => {
   });
 });
 
+// ── GET /auth/me ────────────────────────────────────────────────────────────
 router.get("/auth/me", async (req, res): Promise<void> => {
   if (!req.session.adminId) {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
   res.json({ id: req.session.adminId, username: req.session.adminUsername, role: "admin" });
+});
+
+// ── POST /auth/forgot-pin/request-code ─────────────────────────────────────
+router.post("/auth/forgot-pin/request-code", async (req, res): Promise<void> => {
+  const { phone } = req.body;
+
+  if (!phone) {
+    res.status(400).json({ error: "Phone number is required" });
+    return;
+  }
+
+  // Validate phone exists in members table
+  const members = await db
+    .select({ id: membersTable.id, phone: membersTable.phone })
+    .from(membersTable)
+    .where(eq(membersTable.phone, phone as string));
+
+  if (members.length === 0) {
+    res.status(404).json({ error: "No account found for this phone number" });
+    return;
+  }
+
+  // Generate 6-digit OTP
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+  pendingOtps.set(phone as string, { code, expiresAt });
+
+  // ── Simulated SMS (development) ──
+  logger.info({ phone, code }, "🔐 [SIMULATED SMS] NJF Ledger PIN Reset Code");
+  console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`  📱 NJF Ledger — Simulated SMS`);
+  console.log(`  To: ${phone}`);
+  console.log(`  Code: ${code}`);
+  console.log(`  Expires in: 10 minutes`);
+  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+
+  res.json({
+    success: true,
+    message: "Verification code generated",
+    // Return code in response for development/testing (remove in production)
+    devCode: code,
+  });
+});
+
+// ── POST /auth/forgot-pin/verify-code ──────────────────────────────────────
+router.post("/auth/forgot-pin/verify-code", async (req, res): Promise<void> => {
+  const { phone, code } = req.body;
+
+  if (!phone || !code) {
+    res.status(400).json({ error: "Phone and code are required" });
+    return;
+  }
+
+  const stored = pendingOtps.get(phone as string);
+
+  if (!stored) {
+    res.status(400).json({ error: "No pending code for this number. Please request again." });
+    return;
+  }
+
+  if (Date.now() > stored.expiresAt) {
+    pendingOtps.delete(phone as string);
+    res.status(400).json({ error: "Code has expired. Please request a new one." });
+    return;
+  }
+
+  if (stored.code !== (code as string)) {
+    res.status(400).json({ error: "Incorrect code. Please try again." });
+    return;
+  }
+
+  // Code is valid — issue a reset token (valid 10 min)
+  pendingOtps.delete(phone as string);
+
+  const [admin] = await db.select().from(adminUsersTable);
+  if (!admin) {
+    res.status(500).json({ error: "Admin account not found" });
+    return;
+  }
+
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  resetTokens.set(resetToken, { adminId: admin.id, expiresAt: Date.now() + 10 * 60 * 1000 });
+
+  req.log.info({ adminId: admin.id }, "PIN reset token issued");
+  res.json({ resetToken });
+});
+
+// ── POST /auth/forgot-pin/reset-pin ────────────────────────────────────────
+router.post("/auth/forgot-pin/reset-pin", async (req, res): Promise<void> => {
+  const { resetToken, pin } = req.body;
+
+  if (!resetToken || !pin) {
+    res.status(400).json({ error: "Reset token and new PIN are required" });
+    return;
+  }
+
+  if (!/^\d{4}$/.test(pin as string)) {
+    res.status(400).json({ error: "PIN must be exactly 4 digits" });
+    return;
+  }
+
+  const tokenData = resetTokens.get(resetToken as string);
+
+  if (!tokenData) {
+    res.status(400).json({ error: "Invalid or expired reset token" });
+    return;
+  }
+
+  if (Date.now() > tokenData.expiresAt) {
+    resetTokens.delete(resetToken as string);
+    res.status(400).json({ error: "Reset session expired. Please start over." });
+    return;
+  }
+
+  resetTokens.delete(resetToken as string);
+
+  const pinHash = await bcrypt.hash(pin as string, 12);
+  await db
+    .update(adminUsersTable)
+    .set({ pinHash })
+    .where(eq(adminUsersTable.id, tokenData.adminId));
+
+  req.log.info({ adminId: tokenData.adminId }, "Admin PIN updated");
+  res.json({ success: true });
 });
 
 export default router;

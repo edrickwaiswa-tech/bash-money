@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { LayoutDashboard, Users, ArrowRightLeft, LogOut, ShieldCheck } from "lucide-react";
+
 import { ReactNode } from "react";
 import { useAuth } from "@/contexts/auth";
 import { Button } from "@/components/ui/button";
@@ -31,10 +32,10 @@ export function Layout({ children }: LayoutProps) {
       <header className="sticky top-0 z-30 border-b bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800">
         <div className="flex items-center justify-between px-4 h-16 max-w-lg mx-auto w-full">
           <div className="flex items-center gap-2">
-            <div className="bg-primary text-white p-2 rounded-lg">
-              <ArrowRightLeft className="w-5 h-5" />
+            <div className="bg-primary text-white px-2.5 py-1.5 rounded-lg">
+              <span className="font-black text-sm tracking-tight">NJF</span>
             </div>
-            <span className="font-semibold text-lg tracking-tight">SACCO Ledger</span>
+            <span className="font-black text-lg tracking-tight">NJF Ledger</span>
           </div>
 
           {user && (
