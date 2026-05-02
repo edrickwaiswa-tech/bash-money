@@ -196,4 +196,88 @@ router.post("/auth/forgot-pin/reset-pin", async (req, res): Promise<void> => {
   res.json({ success: true });
 });
 
+// ── Member self-service OTP login ───────────────────────────────────────────
+
+const memberOtps = new Map<string, { code: string; expiresAt: number; memberId: number }>();
+
+// POST /auth/member/request-otp
+router.post("/auth/member/request-otp", async (req, res): Promise<void> => {
+  const { phone } = req.body;
+  if (!phone) {
+    res.status(400).json({ error: "Phone number is required" });
+    return;
+  }
+
+  const [member] = await db
+    .select({ id: membersTable.id, phone: membersTable.phone })
+    .from(membersTable)
+    .where(eq(membersTable.phone, phone as string));
+
+  if (!member) {
+    res.status(404).json({ error: "No account found for this phone number" });
+    return;
+  }
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  memberOtps.set(phone as string, { code, expiresAt: Date.now() + 10 * 60 * 1000, memberId: member.id });
+
+  logger.info({ phone, code }, "📱 [SIMULATED SMS] NJF Ledger Member Login Code");
+  console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`  📱 NJF Ledger — Member Login`);
+  console.log(`  To: ${phone}`);
+  console.log(`  Code: ${code}`);
+  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+
+  res.json({ success: true, devCode: code });
+});
+
+// POST /auth/member/verify-otp
+router.post("/auth/member/verify-otp", async (req, res): Promise<void> => {
+  const { phone, code } = req.body;
+  if (!phone || !code) {
+    res.status(400).json({ error: "Phone and code are required" });
+    return;
+  }
+
+  const stored = memberOtps.get(phone as string);
+  if (!stored) {
+    res.status(400).json({ error: "No pending code. Please request again." });
+    return;
+  }
+  if (Date.now() > stored.expiresAt) {
+    memberOtps.delete(phone as string);
+    res.status(400).json({ error: "Code expired. Please request a new one." });
+    return;
+  }
+  if (stored.code !== (code as string)) {
+    res.status(400).json({ error: "Incorrect code." });
+    return;
+  }
+
+  memberOtps.delete(phone as string);
+  req.session.memberId = stored.memberId;
+  req.session.memberPhone = phone as string;
+
+  req.log.info({ memberId: stored.memberId }, "Member signed in");
+  res.json({ success: true, memberId: stored.memberId });
+});
+
+// GET /auth/member/me
+router.get("/auth/member/me", async (req, res): Promise<void> => {
+  if (!req.session.memberId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  res.json({ memberId: req.session.memberId, phone: req.session.memberPhone });
+});
+
+// POST /auth/member/logout
+router.post("/auth/member/logout", async (req, res): Promise<void> => {
+  req.session.destroy((err) => {
+    if (err) { res.status(500).json({ error: "Logout failed" }); return; }
+    res.clearCookie("connect.sid");
+    res.json({ success: true });
+  });
+});
+
 export default router;

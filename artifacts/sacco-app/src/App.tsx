@@ -12,6 +12,8 @@ import { Dashboard } from "@/pages/dashboard";
 import { MembersList } from "@/pages/members/index";
 import { MemberDetail } from "@/pages/members/[id]";
 import { NewTransaction } from "@/pages/transactions/new";
+import { MemberLogin } from "@/pages/member-login";
+import { MemberPortal } from "@/pages/member-portal";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +23,10 @@ function Router() {
       {/* Public auth routes — no layout */}
       <Route path="/login" component={Login} />
       <Route path="/forgot-pin" component={ForgotPin} />
+
+      {/* Member self-service portal — no layout */}
+      <Route path="/my-account" component={MemberLogin} />
+      <Route path="/my-account/portal" component={MemberPortal} />
 
       {/* All other routes get the layout */}
       <Route>
