@@ -2,8 +2,11 @@ import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/contexts/auth";
 import { Layout } from "@/components/layout";
+import { ProtectedRoute } from "@/components/protected-route";
 import NotFound from "@/pages/not-found";
+import { Login } from "@/pages/login";
 import { Dashboard } from "@/pages/dashboard";
 import { MembersList } from "@/pages/members/index";
 import { MemberDetail } from "@/pages/members/[id]";
@@ -13,15 +16,26 @@ const queryClient = new QueryClient();
 
 function Router() {
   return (
-    <Layout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/members" component={MembersList} />
-        <Route path="/members/:id" component={MemberDetail} />
-        <Route path="/transactions/new" component={NewTransaction} />
-        <Route component={NotFound} />
-      </Switch>
-    </Layout>
+    <Switch>
+      {/* Public auth route — no layout */}
+      <Route path="/login" component={Login} />
+
+      {/* All other routes get the layout */}
+      <Route>
+        <Layout>
+          <Switch>
+            <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
+            <Route path="/members" component={() => <ProtectedRoute component={MembersList} />} />
+            <Route path="/transactions/new" component={() => <ProtectedRoute component={NewTransaction} />} />
+
+            {/* Public member self-service — no auth required */}
+            <Route path="/members/:id" component={MemberDetail} />
+
+            <Route component={NotFound} />
+          </Switch>
+        </Layout>
+      </Route>
+    </Switch>
   );
 }
 
@@ -30,7 +44,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
+          <AuthProvider>
+            <Router />
+          </AuthProvider>
         </WouterRouter>
         <Toaster richColors position="top-center" />
       </TooltipProvider>

@@ -8,6 +8,7 @@ import {
   GetTransactionParams,
   ListTransactionsQueryParams,
 } from "@workspace/api-zod";
+import { requireAdmin } from "../middlewares/auth";
 
 const router = Router();
 
@@ -17,7 +18,8 @@ function generateRef(): string {
   return `TXN-${ts}-${rand}`;
 }
 
-router.get("/transactions", async (req, res) => {
+// Admin-only: list all transactions
+router.get("/transactions", requireAdmin, async (req, res) => {
   try {
     const query = ListTransactionsQueryParams.parse({
       memberId: req.query.memberId ? Number(req.query.memberId) : undefined,
@@ -57,7 +59,8 @@ router.get("/transactions", async (req, res) => {
   }
 });
 
-router.post("/transactions", async (req, res) => {
+// Admin-only: create transaction
+router.post("/transactions", requireAdmin, async (req, res) => {
   try {
     const body = CreateTransactionBody.parse(req.body);
 
@@ -118,6 +121,7 @@ router.post("/transactions", async (req, res) => {
   }
 });
 
+// Public: view transaction receipt by ID
 router.get("/transactions/:transactionId", async (req, res) => {
   try {
     const { transactionId } = GetTransactionParams.parse({

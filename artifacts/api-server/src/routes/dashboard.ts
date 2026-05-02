@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { membersTable, transactionsTable, CREDIT_TYPES } from "@workspace/db";
-import { eq, desc, gte, sql } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { GetRecentTransactionsQueryParams } from "@workspace/api-zod";
+import { requireAdmin } from "../middlewares/auth";
 
 const router = Router();
 
-router.get("/dashboard/summary", async (req, res) => {
+router.get("/dashboard/summary", requireAdmin, async (req, res) => {
   try {
     const [{ count: totalMembers }] = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -55,7 +56,7 @@ router.get("/dashboard/summary", async (req, res) => {
   }
 });
 
-router.get("/dashboard/recent-transactions", async (req, res) => {
+router.get("/dashboard/recent-transactions", requireAdmin, async (req, res) => {
   try {
     const query = GetRecentTransactionsQueryParams.parse({
       limit: req.query.limit ? Number(req.query.limit) : undefined,

@@ -11,10 +11,12 @@ import {
   GetMemberLedgerParams,
   ListMembersQueryParams,
 } from "@workspace/api-zod";
+import { requireAdmin } from "../middlewares/auth";
 
 const router = Router();
 
-router.get("/members", async (req, res) => {
+// Admin-only: list all members
+router.get("/members", requireAdmin, async (req, res) => {
   try {
     const query = ListMembersQueryParams.parse(req.query);
     let members;
@@ -39,7 +41,8 @@ router.get("/members", async (req, res) => {
   }
 });
 
-router.post("/members", async (req, res) => {
+// Admin-only: create member
+router.post("/members", requireAdmin, async (req, res) => {
   try {
     const body = CreateMemberBody.parse(req.body);
     const joinDate = body.joinDate ?? new Date().toISOString().split("T")[0];
@@ -54,6 +57,7 @@ router.post("/members", async (req, res) => {
   }
 });
 
+// Public: member self-service — view own profile
 router.get("/members/:memberId", async (req, res) => {
   try {
     const { memberId } = GetMemberParams.parse({
@@ -104,7 +108,8 @@ router.get("/members/:memberId", async (req, res) => {
   }
 });
 
-router.put("/members/:memberId", async (req, res) => {
+// Admin-only: update member
+router.put("/members/:memberId", requireAdmin, async (req, res) => {
   try {
     const { memberId } = UpdateMemberParams.parse({
       memberId: Number(req.params.memberId),
@@ -126,7 +131,8 @@ router.put("/members/:memberId", async (req, res) => {
   }
 });
 
-router.delete("/members/:memberId", async (req, res) => {
+// Admin-only: delete member
+router.delete("/members/:memberId", requireAdmin, async (req, res) => {
   try {
     const { memberId } = DeleteMemberParams.parse({
       memberId: Number(req.params.memberId),
@@ -140,6 +146,7 @@ router.delete("/members/:memberId", async (req, res) => {
   }
 });
 
+// Public: member self-service — view own ledger
 router.get("/members/:memberId/ledger", async (req, res) => {
   try {
     const { memberId } = GetMemberLedgerParams.parse({
