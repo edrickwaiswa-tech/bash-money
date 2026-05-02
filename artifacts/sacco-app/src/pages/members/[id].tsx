@@ -7,6 +7,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatCurrency, formatDate, formatTransactionType } from "@/lib/format";
+import { exportMemberStatementPDF } from "@/lib/pdf-export";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -16,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { 
   ArrowLeft, Wallet, Landmark, Phone, CreditCard, 
-  Calendar, Edit, Trash2, ArrowDownToLine, ArrowUpFromLine 
+  Calendar, Edit, Trash2, FileDown
 } from "lucide-react";
 
 export function MemberDetail() {
@@ -56,6 +57,20 @@ export function MemberDetail() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [editData, setEditData] = useState({ name: "", phone: "", idNumber: "" });
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportPDF = () => {
+    if (!profile || !ledger) return;
+    setIsExporting(true);
+    try {
+      exportMemberStatementPDF(profile, ledger);
+      toast.success("Statement exported as PDF");
+    } catch {
+      toast.error("Failed to export PDF");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   useEffect(() => {
     if (profile) {
@@ -127,9 +142,22 @@ export function MemberDetail() {
         <TabsContent value="ledger" className="space-y-4 pt-4">
           <div className="flex justify-between items-center">
             <h3 className="font-semibold">Transaction History</h3>
-            <Button size="sm" asChild>
-              <Link href={`/transactions/new?memberId=${memberId}`}>Transact</Link>
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleExportPDF}
+                disabled={isExporting || isLedgerLoading || !ledger}
+                data-testid="button-export-pdf"
+                className="gap-1.5"
+              >
+                <FileDown className="h-3.5 w-3.5" />
+                {isExporting ? "Exporting..." : "Export PDF"}
+              </Button>
+              <Button size="sm" asChild>
+                <Link href={`/transactions/new?memberId=${memberId}`}>Transact</Link>
+              </Button>
+            </div>
           </div>
           
           <Card>
