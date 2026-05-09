@@ -9,6 +9,7 @@ interface PinInputProps {
   disabled?: boolean;
   className?: string;
   autoFocus?: boolean;
+  error?: boolean;
 }
 
 export function PinInput({
@@ -19,6 +20,7 @@ export function PinInput({
   disabled = false,
   className,
   autoFocus = false,
+  error = false,
 }: PinInputProps) {
   const refs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -65,31 +67,36 @@ export function PinInput({
 
   return (
     <div className={cn("flex gap-3 justify-center", className)}>
-      {Array.from({ length }).map((_, i) => (
-        <input
-          key={i}
-          ref={(el) => { refs.current[i] = el; }}
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          maxLength={1}
-          value={digits[i] ?? ""}
-          onChange={(e) => handleChange(i, e.target.value)}
-          onKeyDown={(e) => handleKeyDown(i, e)}
-          onPaste={handlePaste}
-          onFocus={(e) => e.target.select()}
-          disabled={disabled}
-          autoFocus={autoFocus && i === 0}
-          className={cn(
-            "w-14 h-14 text-center text-2xl font-bold rounded-xl border-2 outline-none transition-all",
-            "bg-white dark:bg-zinc-900",
-            "border-gray-200 dark:border-zinc-700",
-            "focus:border-primary focus:ring-2 focus:ring-primary/20",
-            digits[i] ? "border-primary/60 bg-primary/5" : "",
-            disabled && "opacity-50 cursor-not-allowed"
-          )}
-        />
-      ))}
+      {Array.from({ length }).map((_, i) => {
+        const filled = !!digits[i];
+        return (
+          <input
+            key={i}
+            ref={(el) => { refs.current[i] = el; }}
+            type="password"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={1}
+            value={digits[i] ?? ""}
+            onChange={(e) => handleChange(i, e.target.value)}
+            onKeyDown={(e) => handleKeyDown(i, e)}
+            onPaste={handlePaste}
+            onFocus={(e) => e.target.select()}
+            disabled={disabled}
+            autoFocus={autoFocus && i === 0}
+            className={cn(
+              "w-14 h-14 text-center text-2xl font-black rounded-2xl border-2 outline-none transition-all shadow-sm",
+              "bg-white",
+              error
+                ? "border-red-400 bg-red-50 text-red-600 ring-2 ring-red-200"
+                : filled
+                ? "border-[#0f2557] bg-[#0f2557]/5 text-[#0f2557]"
+                : "border-gray-200 text-[#0f2557] focus:border-[#0f2557] focus:ring-2 focus:ring-[#0f2557]/20",
+              disabled && "opacity-50 cursor-not-allowed",
+            )}
+          />
+        );
+      })}
     </div>
   );
 }

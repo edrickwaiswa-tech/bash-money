@@ -2,7 +2,7 @@ import { useGetDashboardSummary, useGetRecentTransactions } from "@workspace/api
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatDate, formatTransactionType } from "@/lib/format";
-import { Users, Wallet, Landmark, Activity, ArrowDownToLine, ArrowUpFromLine, ShieldCheck } from "lucide-react";
+import { Users, Wallet, Landmark, Activity, ArrowDownToLine, ArrowUpFromLine, ShieldCheck, KeyRound, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 
 export function Dashboard() {
@@ -77,6 +77,20 @@ export function Dashboard() {
               <ShieldCheck className="w-3.5 h-3.5 text-[#c9a144]" />
               <span className="text-[10px] text-muted-foreground font-medium">All transactions secured &amp; encrypted</span>
             </div>
+
+            {/* Security Settings shortcut */}
+            <Link href="/security">
+              <div className="bg-white rounded-2xl px-4 py-3.5 shadow-sm border border-gray-100 flex items-center gap-3 hover:border-[#0f2557]/20 transition-colors cursor-pointer">
+                <div className="w-9 h-9 rounded-xl bg-[#0f2557]/5 flex items-center justify-center flex-shrink-0">
+                  <KeyRound className="w-4.5 h-4.5 text-[#0f2557]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-[#0f2557] text-sm leading-tight">Security Settings</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Change your admin login PIN</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              </div>
+            </Link>
           </>
         ) : null}
 

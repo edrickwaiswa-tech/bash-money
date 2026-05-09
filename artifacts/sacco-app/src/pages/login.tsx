@@ -192,10 +192,11 @@ export function Login() {
                   <PinInput
                     length={4}
                     value={adminPin}
-                    onChange={setAdminPin}
+                    onChange={(v) => { setAdminPin(v); setAdminError(""); }}
                     onComplete={handleAdminPinComplete}
                     disabled={adminLoading}
                     autoFocus
+                    error={!!adminError}
                   />
 
                   {adminError && (

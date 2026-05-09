@@ -253,6 +253,59 @@ router.post("/auth/member/verify-otp", async (req, res): Promise<void> => {
   res.json({ success: true, memberId: stored.memberId });
 });
 
+// ── POST /auth/change-pin ────────────────────────────────────────────────────
+router.post("/auth/change-pin", async (req, res): Promise<void> => {
+  if (!req.session.adminId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  const { currentPin, newPin, confirmPin } = req.body;
+
+  if (!currentPin || !newPin || !confirmPin) {
+    res.status(400).json({ error: "All PIN fields are required" });
+    return;
+  }
+
+  if (!/^\d{4}$/.test(newPin as string)) {
+    res.status(400).json({ error: "New PIN must be exactly 4 digits" });
+    return;
+  }
+
+  if (newPin !== confirmPin) {
+    res.status(400).json({ error: "New PIN and confirmation do not match" });
+    return;
+  }
+
+  const [admin] = await db
+    .select()
+    .from(adminUsersTable)
+    .where(eq(adminUsersTable.id, req.session.adminId));
+
+  if (!admin) {
+    res.status(404).json({ error: "Admin account not found" });
+    return;
+  }
+
+  const valid = admin.pinHash
+    ? await bcrypt.compare(currentPin as string, admin.pinHash)
+    : await bcrypt.compare(currentPin as string, admin.passwordHash);
+
+  if (!valid) {
+    res.status(401).json({ error: "Current PIN is incorrect" });
+    return;
+  }
+
+  const pinHash = await bcrypt.hash(newPin as string, 12);
+  await db
+    .update(adminUsersTable)
+    .set({ pinHash })
+    .where(eq(adminUsersTable.id, req.session.adminId));
+
+  req.log.info({ adminId: req.session.adminId }, "Admin PIN changed");
+  res.json({ success: true });
+});
+
 // POST /auth/member/login-pin — sign in with account number (or phone) + 4-digit PIN
 router.post("/auth/member/login-pin", async (req, res): Promise<void> => {
   const { identifier, pin } = req.body;
