@@ -131,30 +131,37 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-[#f4f6fb]">
-      {/* Navy top banner */}
-      <div className="bg-[#0f2557] px-4 pt-8 pb-16 flex flex-col items-center text-center relative overflow-hidden">
+    <div
+      className="min-h-[100dvh] flex flex-col"
+      style={{ background: "linear-gradient(168deg, #0f2557 0%, #0a1840 30%, #060e2a 60%, #020816 100%)" }}
+    >
+      {/* Centered logo section — transparent so the page gradient shows through */}
+      <div className="px-4 pt-10 pb-14 flex flex-col items-center text-center relative overflow-hidden">
         {/* Gold radial glow behind logo */}
         <div
           className="absolute pointer-events-none"
           style={{
-            width: 220,
-            height: 220,
+            width: 240,
+            height: 240,
             top: "50%",
             left: "50%",
-            transform: "translate(-50%, -60%)",
-            background: "radial-gradient(ellipse, rgba(201,161,68,0.22) 0%, transparent 68%)",
-            filter: "blur(18px)",
+            transform: "translate(-50%, -58%)",
+            background: "radial-gradient(ellipse, rgba(201,161,68,0.28) 0%, transparent 65%)",
+            filter: "blur(20px)",
           }}
         />
         <div className="relative z-10 drop-shadow-2xl">
           <BmmLogo size="xl" variant="badge" />
         </div>
-        <p className="text-white/50 text-xs mt-4 uppercase tracking-widest font-medium relative z-10">Secure Portal</p>
+        <p className="text-white/45 text-[11px] mt-4 uppercase tracking-[0.2em] font-semibold relative z-10">
+          {tab === "admin" ? "Authorized Personnel Only" : "Access your BMMFS account"}
+        </p>
       </div>
 
       <div className="flex-1 px-4 -mt-8 flex flex-col max-w-sm mx-auto w-full">
-        <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-3xl border border-white/10 overflow-hidden"
+          style={{ boxShadow: "0 24px 60px rgba(2,8,22,0.55), 0 4px 16px rgba(2,8,22,0.3)" }}
+        >
 
           {/* ── Portal tab selector ── */}
           <div className="flex border-b border-gray-100 bg-gray-50/70">
