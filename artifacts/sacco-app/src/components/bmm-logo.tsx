@@ -30,8 +30,8 @@ export function BmmLogo({ size = "md", variant = "badge" }: BmmLogoProps) {
     <div className="flex items-center gap-2.5 min-w-0">
       {badge}
       <span
-        className="font-black text-white leading-tight tracking-wide uppercase whitespace-nowrap overflow-hidden text-ellipsis"
-        style={{ fontSize: 11, letterSpacing: "0.05em" }}
+        className="font-black text-white leading-tight whitespace-nowrap overflow-hidden text-ellipsis"
+        style={{ fontSize: 13, letterSpacing: "0.06em", textTransform: "uppercase" }}
       >
         Bash M. Money Financial Services Ltd
       </span>

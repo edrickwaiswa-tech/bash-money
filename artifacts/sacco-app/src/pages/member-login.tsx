@@ -69,8 +69,8 @@ export function MemberLogin() {
       {/* Navy top banner */}
       <div className="bg-[#0f2557] px-4 pt-12 pb-16 flex flex-col items-center text-center">
         <BmmLogo size="lg" variant="badge" />
-        <h1 className="text-white font-black text-xl tracking-tight mt-4 leading-tight">
-          Bash M. Money And Financial<br />Services Ltd
+        <h1 className="text-white font-black text-lg tracking-widest mt-4 leading-snug uppercase">
+          Bash M. Money Financial Services Ltd
         </h1>
         <p className="text-white/50 text-xs mt-1 uppercase tracking-widest font-medium">Member Portal</p>
       </div>

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PinInput } from "@/components/pin-input";
+import { BmmLogo } from "@/components/bmm-logo";
 import { ArrowLeft, Phone, KeyRound, CheckCircle, AlertCircle, Info } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -102,10 +103,10 @@ export function ForgotPin() {
       <div className="w-full max-w-sm space-y-6">
         {/* Logo */}
         <div className="flex flex-col items-center gap-3 text-center">
-          <div className="bg-primary text-white p-3 rounded-2xl shadow-lg">
-            <span className="text-white font-black text-xl tracking-tight">BM</span>
-          </div>
-          <h1 className="text-2xl font-black tracking-tight">Bash M. Money And Financial Services Ltd</h1>
+          <BmmLogo size="lg" variant="badge" />
+          <h1 className="text-xl font-black tracking-widest uppercase text-[#0f2557] leading-snug">
+            Bash M. Money Financial Services Ltd
+          </h1>
         </div>
 
         <Card className="shadow-md border-0">
