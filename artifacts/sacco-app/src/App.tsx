@@ -24,7 +24,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/forgot-pin" component={ForgotPin} />
 
-      {/* Member self-service portal — no layout */}
+      {/* Legacy member login redirect → unified login */}
       <Route path="/my-account" component={MemberLogin} />
       <Route path="/my-account/portal" component={MemberPortal} />
 

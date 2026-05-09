@@ -8,11 +8,13 @@ import { formatCurrency, formatDate, formatTransactionType } from "@/lib/format"
 import { exportMemberStatementPDF } from "@/lib/pdf-export";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PinInput } from "@/components/pin-input";
+import { MemberAvatar } from "@/components/member-avatar";
 import { toast } from "sonner";
 import {
   Wallet, Landmark, LogOut, FileDown, TrendingUp, TrendingDown,
   User, Phone, CreditCard, Calendar, RefreshCw, Bell, BellOff,
-  CheckCheck, ArrowUpCircle, ArrowDownCircle,
+  CheckCheck, ArrowUpCircle, ArrowDownCircle, ShieldCheck, Hash,
 } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -38,6 +40,12 @@ export function MemberPortal() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifsLoading, setNotifsLoading] = useState(false);
 
+  // PIN setup state
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [pinStep, setPinStep] = useState<"set" | "confirm">("set");
+  const [pinLoading, setPinLoading] = useState(false);
+
   useEffect(() => {
     fetch(`${BASE}/api/auth/member/me`, { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
@@ -45,10 +53,10 @@ export function MemberPortal() {
         if (data?.memberId) {
           setMemberId(data.memberId);
         } else {
-          navigate("/my-account");
+          navigate("/login");
         }
       })
-      .catch(() => navigate("/my-account"))
+      .catch(() => navigate("/login"))
       .finally(() => setAuthLoading(false));
   }, []);
 
@@ -110,7 +118,7 @@ export function MemberPortal() {
       method: "POST",
       credentials: "same-origin",
     });
-    navigate("/my-account");
+    navigate("/login");
   };
 
   const handleExportPDF = () => {
@@ -126,11 +134,43 @@ export function MemberPortal() {
     }
   };
 
+  const handleSetPin = async (pin: string) => {
+    if (pinStep === "set") {
+      setNewPin(pin);
+      setPinStep("confirm");
+      setConfirmPin("");
+      return;
+    }
+    // confirm step
+    if (pin !== newPin) {
+      toast.error("PINs don't match. Please try again.");
+      setNewPin(""); setConfirmPin(""); setPinStep("set");
+      return;
+    }
+    setPinLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/auth/member/set-pin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ pin }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Failed to set PIN"); }
+      else { toast.success("PIN set successfully! You can now log in with your account number + PIN."); }
+    } catch {
+      toast.error("Network error. Please try again.");
+    } finally {
+      setPinLoading(false);
+      setNewPin(""); setConfirmPin(""); setPinStep("set");
+    }
+  };
+
   if (authLoading || profileLoading) {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-gray-50">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-[#f4f6fb]">
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <RefreshCw className="w-6 h-6 animate-spin text-primary" />
+          <RefreshCw className="w-6 h-6 animate-spin text-[#0f2557]" />
           <p className="text-sm">Loading your account…</p>
         </div>
       </div>
@@ -139,13 +179,6 @@ export function MemberPortal() {
 
   if (!profile) return null;
 
-  const initials = profile.name
-    .split(" ")
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
   const tabs = [
     { key: "ledger" as const, label: "Transactions" },
     { key: "notifications" as const, label: "Alerts", badge: unreadCount },
@@ -153,20 +186,21 @@ export function MemberPortal() {
   ];
 
   return (
-    <div className="min-h-[100dvh] bg-gray-50 dark:bg-zinc-950 flex flex-col max-w-lg mx-auto">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800 px-4 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="bg-primary text-white px-2 py-1 rounded-lg">
-            <span className="font-black text-xs tracking-tight">NJF</span>
+    <div className="min-h-[100dvh] bg-[#f4f6fb] flex flex-col max-w-lg mx-auto">
+
+      {/* ── Header ── */}
+      <header className="sticky top-0 z-30 bg-[#0f2557] px-4 h-14 flex items-center justify-between shadow-md">
+        <div className="flex items-center gap-2.5">
+          <div className="bg-[#c9a144] text-[#0f2557] px-2 py-1 rounded-lg">
+            <span className="font-black text-xs tracking-tight">BMM</span>
           </div>
-          <span className="font-black text-sm tracking-tight">NJF Ledger</span>
+          <span className="font-black text-sm tracking-tight text-white">My Account</span>
         </div>
         <div className="flex items-center gap-3">
           {unreadCount > 0 && (
             <button
               onClick={() => setActiveTab("notifications")}
-              className="relative text-muted-foreground hover:text-primary transition-colors"
+              className="relative text-white/70 hover:text-white transition-colors"
             >
               <Bell className="w-4 h-4" />
               <span className="absolute -top-1.5 -right-1.5 bg-destructive text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
@@ -176,7 +210,7 @@ export function MemberPortal() {
           )}
           <button
             onClick={handleLogout}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors"
+            className="flex items-center gap-1.5 text-xs text-white/70 hover:text-white transition-colors"
           >
             <LogOut className="w-3.5 h-3.5" />
             Sign out
@@ -184,60 +218,66 @@ export function MemberPortal() {
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-5 space-y-5 pb-24">
-        {/* Welcome */}
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm flex-shrink-0">
-            {initials}
-          </div>
-          <div>
+      <main className="flex-1 px-4 py-5 space-y-4 pb-24">
+
+        {/* ── Welcome banner ── */}
+        <div className="bg-white rounded-2xl px-4 py-4 flex items-center gap-3 shadow-sm border border-gray-100">
+          <MemberAvatar
+            name={profile.name}
+            photoUrl={(profile as any).profilePictureUrl}
+            size="lg"
+          />
+          <div className="flex-1 min-w-0">
             <p className="text-xs text-muted-foreground">Welcome back</p>
-            <h1 className="text-lg font-bold leading-tight">{profile.name}</h1>
+            <h1 className="text-base font-black text-[#0f2557] leading-tight truncate">{profile.name}</h1>
+            {(profile as any).accountNumber && (
+              <p className="text-[10px] font-mono text-[#c9a144] font-bold mt-0.5 flex items-center gap-0.5">
+                <Hash className="w-2.5 h-2.5" />{(profile as any).accountNumber}
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Balance Cards */}
+        {/* ── Balance Cards ── */}
         <div className="grid grid-cols-2 gap-3">
-          <Card className="bg-primary/5 border-primary/20">
-            <CardContent className="p-4 flex flex-col gap-1">
-              <div className="flex items-center gap-1.5 text-primary">
-                <Wallet className="h-3.5 w-3.5" />
-                <span className="text-[10px] font-semibold uppercase tracking-wider">Total Savings</span>
-              </div>
-              <span className="text-lg font-bold text-primary">
-                {formatCurrency(profile.totalSavings)}
-              </span>
-            </CardContent>
-          </Card>
-          <Card className="bg-destructive/5 border-destructive/20">
-            <CardContent className="p-4 flex flex-col gap-1">
-              <div className="flex items-center gap-1.5 text-destructive">
-                <Landmark className="h-3.5 w-3.5" />
-                <span className="text-[10px] font-semibold uppercase tracking-wider">Loan Balance</span>
-              </div>
-              <span className="text-lg font-bold text-destructive">
-                {formatCurrency(profile.outstandingLoan)}
-              </span>
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-2xl p-4 border border-[#0f2557]/10 shadow-sm">
+            <div className="flex items-center gap-1.5 text-[#0f2557] mb-1.5">
+              <Wallet className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-bold uppercase tracking-wider">Total Savings</span>
+            </div>
+            <span className="text-lg font-black text-[#0f2557]">
+              {formatCurrency(profile.totalSavings)}
+            </span>
+          </div>
+          <div className="bg-white rounded-2xl p-4 border border-destructive/10 shadow-sm">
+            <div className="flex items-center gap-1.5 text-destructive mb-1.5">
+              <Landmark className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-bold uppercase tracking-wider">Loan Balance</span>
+            </div>
+            <span className="text-lg font-black text-destructive">
+              {formatCurrency(profile.outstandingLoan)}
+            </span>
+          </div>
         </div>
 
-        {/* Net Balance bar */}
-        <div className="flex justify-between items-center bg-white dark:bg-zinc-900 border rounded-xl px-4 py-3 shadow-sm">
+        {/* ── Net Balance ── */}
+        <div className="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-[#c9a144]/20 shadow-sm"
+          style={{ boxShadow: "0 2px 12px rgba(15,37,87,0.08)" }}
+        >
           <div>
-            <p className="text-xs text-muted-foreground">Net Balance</p>
-            <p className={`text-xl font-bold ${profile.currentBalance >= 0 ? "text-primary" : "text-destructive"}`}>
+            <p className="text-xs text-muted-foreground font-medium">Net Balance</p>
+            <p className={`text-xl font-black ${profile.currentBalance >= 0 ? "text-[#0f2557]" : "text-destructive"}`}>
               {formatCurrency(profile.currentBalance)}
             </p>
           </div>
           <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground">
             {ledger && (
               <>
-                <span className="flex items-center gap-1 text-primary">
+                <span className="flex items-center gap-1 text-emerald-600 font-semibold">
                   <TrendingUp className="w-3 h-3" />
                   +{formatCurrency(ledger.totalCredits)}
                 </span>
-                <span className="flex items-center gap-1 text-destructive">
+                <span className="flex items-center gap-1 text-destructive font-semibold">
                   <TrendingDown className="w-3 h-3" />
                   -{formatCurrency(ledger.totalDebits)}
                 </span>
@@ -246,16 +286,16 @@ export function MemberPortal() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-muted rounded-lg p-1">
+        {/* ── Tabs ── */}
+        <div className="flex gap-1 bg-white rounded-xl p-1 border border-gray-100 shadow-sm">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`relative flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${
+              className={`relative flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
                 activeTab === tab.key
-                  ? "bg-white dark:bg-zinc-900 shadow-sm text-foreground"
-                  : "text-muted-foreground"
+                  ? "bg-[#0f2557] text-white shadow-sm"
+                  : "text-muted-foreground hover:text-[#0f2557]"
               }`}
             >
               {tab.label}
@@ -272,46 +312,42 @@ export function MemberPortal() {
         {activeTab === "ledger" && (
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <h2 className="font-semibold text-sm">Transaction History</h2>
+              <h2 className="font-bold text-sm text-[#0f2557]">Transaction History</h2>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={handleExportPDF}
                 disabled={isExporting || ledgerLoading || !ledger}
-                className="gap-1.5 h-8 text-xs"
+                className="gap-1.5 h-8 text-xs rounded-xl border-[#0f2557]/20 text-[#0f2557]"
               >
                 <FileDown className="h-3.5 w-3.5" />
                 {isExporting ? "Exporting..." : "Export PDF"}
               </Button>
             </div>
-            <Card>
-              <div className="divide-y divide-border">
+            <Card className="rounded-2xl border-gray-100 shadow-sm">
+              <div className="divide-y divide-gray-50">
                 {ledgerLoading ? (
-                  <div className="p-6 text-center text-sm text-muted-foreground">Loading…</div>
+                  <div className="p-6 text-center text-sm text-muted-foreground">
+                    <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2 text-[#0f2557]" />
+                    Loading…
+                  </div>
                 ) : !ledger?.entries.length ? (
                   <div className="p-8 text-center text-muted-foreground text-sm">No transactions yet</div>
                 ) : (
                   [...(ledger.entries ?? [])].reverse().map((entry) => (
                     <div key={entry.id} className="p-4 text-sm">
                       <div className="flex justify-between items-start mb-1">
-                        <div className="font-medium">{formatTransactionType(entry.type)}</div>
-                        <div className={`font-semibold ${entry.direction === "credit" ? "text-primary" : "text-destructive"}`}>
+                        <div className="font-semibold text-[#0f2557]">{formatTransactionType(entry.type)}</div>
+                        <div className={`font-black ${entry.direction === "credit" ? "text-emerald-600" : "text-destructive"}`}>
                           {entry.direction === "credit" ? "+" : "-"}{formatCurrency(entry.amount)}
                         </div>
                       </div>
                       <div className="flex justify-between items-center text-xs text-muted-foreground">
                         <span>{formatDate(entry.createdAt)}</span>
-                        <span>
-                          Bal:{" "}
-                          <span className={`font-medium ${entry.runningBalance >= 0 ? "text-primary" : "text-destructive"}`}>
-                            {formatCurrency(entry.runningBalance)}
-                          </span>
-                        </span>
+                        <span>Bal: <span className={`font-semibold ${entry.runningBalance >= 0 ? "text-[#0f2557]" : "text-destructive"}`}>{formatCurrency(entry.runningBalance)}</span></span>
                       </div>
                       {entry.notes && (
-                        <div className="mt-1.5 text-xs text-muted-foreground bg-muted px-2 py-1.5 rounded">
-                          {entry.notes}
-                        </div>
+                        <div className="mt-1.5 text-xs text-muted-foreground bg-muted px-2 py-1.5 rounded-lg">{entry.notes}</div>
                       )}
                     </div>
                   ))
@@ -325,12 +361,9 @@ export function MemberPortal() {
         {activeTab === "notifications" && (
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <h2 className="font-semibold text-sm">Account Alerts</h2>
+              <h2 className="font-bold text-sm text-[#0f2557]">Account Alerts</h2>
               {unreadCount > 0 && (
-                <button
-                  onClick={markAllRead}
-                  className="flex items-center gap-1 text-xs text-primary hover:underline"
-                >
+                <button onClick={markAllRead} className="flex items-center gap-1 text-xs text-[#0f2557] hover:underline font-semibold">
                   <CheckCheck className="w-3.5 h-3.5" />
                   Mark all read
                 </button>
@@ -343,12 +376,10 @@ export function MemberPortal() {
                 Loading alerts…
               </div>
             ) : notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
+              <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground bg-white rounded-2xl border border-gray-100">
                 <BellOff className="w-8 h-8 opacity-40" />
-                <p className="text-sm">No alerts yet</p>
-                <p className="text-xs text-center max-w-[200px]">
-                  You'll be notified here whenever a transaction is posted to your account
-                </p>
+                <p className="text-sm font-medium">No alerts yet</p>
+                <p className="text-xs text-center max-w-[200px]">You'll be notified here whenever a transaction is posted to your account</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -356,49 +387,25 @@ export function MemberPortal() {
                   <div
                     key={n.id}
                     className={`rounded-xl border p-4 transition-colors ${
-                      n.read
-                        ? "bg-white dark:bg-zinc-900 border-border"
-                        : n.direction === "credit"
-                        ? "bg-primary/5 border-primary/30"
-                        : "bg-destructive/5 border-destructive/20"
+                      n.read ? "bg-white border-gray-100" : n.direction === "credit" ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      <div
-                        className={`mt-0.5 flex-shrink-0 rounded-full p-1.5 ${
-                          n.direction === "credit"
-                            ? "bg-primary/10 text-primary"
-                            : "bg-destructive/10 text-destructive"
-                        }`}
-                      >
-                        {n.direction === "credit" ? (
-                          <ArrowUpCircle className="w-4 h-4" />
-                        ) : (
-                          <ArrowDownCircle className="w-4 h-4" />
-                        )}
+                      <div className={`mt-0.5 flex-shrink-0 rounded-full p-1.5 ${n.direction === "credit" ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-500"}`}>
+                        {n.direction === "credit" ? <ArrowUpCircle className="w-4 h-4" /> : <ArrowDownCircle className="w-4 h-4" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start gap-2 mb-1">
-                          <span className="text-sm font-semibold">
-                            {formatTransactionType(n.type)}
-                          </span>
-                          <span
-                            className={`text-sm font-bold flex-shrink-0 ${
-                              n.direction === "credit" ? "text-primary" : "text-destructive"
-                            }`}
-                          >
+                          <span className="text-sm font-semibold text-[#0f2557]">{formatTransactionType(n.type)}</span>
+                          <span className={`text-sm font-black flex-shrink-0 ${n.direction === "credit" ? "text-emerald-600" : "text-destructive"}`}>
                             {n.direction === "credit" ? "+" : "-"}{formatCurrency(n.amount)}
                           </span>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          {n.message}
-                        </p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{n.message}</p>
                         <div className="flex items-center justify-between mt-2">
                           <span className="text-[10px] text-muted-foreground">{formatDate(n.createdAt)}</span>
                           {!n.read && (
-                            <span className="text-[9px] bg-primary text-white px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-wider">
-                              New
-                            </span>
+                            <span className="text-[9px] bg-[#0f2557] text-white px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-wider">New</span>
                           )}
                         </div>
                       </div>
@@ -412,37 +419,96 @@ export function MemberPortal() {
 
         {/* ── PROFILE TAB ── */}
         {activeTab === "profile" && (
-          <Card>
-            <CardContent className="p-4 space-y-4">
-              <div className="flex items-center gap-3 pb-3 border-b">
-                <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-base flex-shrink-0">
-                  {initials}
-                </div>
-                <div>
-                  <p className="font-semibold">{profile.name}</p>
-                  <p className="text-xs text-muted-foreground">Member</p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                {[
-                  { icon: User, label: "Full Name", value: profile.name },
-                  { icon: Phone, label: "Phone Number", value: profile.phone },
-                  { icon: CreditCard, label: "Member ID", value: profile.idNumber },
-                  { icon: Calendar, label: "Member Since", value: formatDate(profile.joinDate) },
-                ].map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                      <Icon className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
-                      <p className="text-sm font-medium">{value}</p>
-                    </div>
+          <div className="space-y-3">
+            {/* Profile card */}
+            <Card className="rounded-2xl border-gray-100 shadow-sm">
+              <CardContent className="p-4 space-y-4">
+                <div className="flex items-center gap-3 pb-3 border-b border-gray-50">
+                  <MemberAvatar
+                    name={profile.name}
+                    photoUrl={(profile as any).profilePictureUrl}
+                    size="lg"
+                  />
+                  <div>
+                    <p className="font-black text-[#0f2557]">{profile.name}</p>
+                    <p className="text-xs text-muted-foreground">Member</p>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+                <div className="space-y-3">
+                  {[
+                    { icon: User,       label: "Full Name",     value: profile.name },
+                    { icon: Phone,      label: "Phone Number",  value: profile.phone },
+                    { icon: Hash,       label: "Account No.",   value: (profile as any).accountNumber ?? "—", mono: true },
+                    { icon: CreditCard, label: "Member ID",     value: profile.idNumber },
+                    { icon: Calendar,   label: "Member Since",  value: formatDate(profile.joinDate) },
+                  ].map(({ icon: Icon, label, value, mono }) => (
+                    <div key={label} className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-[#0f2557]/5 flex items-center justify-center flex-shrink-0">
+                        <Icon className="w-3.5 h-3.5 text-[#0f2557]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{label}</p>
+                        <p className={`text-sm text-[#0f2557] truncate ${mono ? "font-mono font-black" : "font-semibold"}`}>{value}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* PIN setup card */}
+            <Card className="rounded-2xl border-[#c9a144]/20 shadow-sm">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2 pb-2 border-b border-gray-50">
+                  <div className="w-7 h-7 rounded-lg bg-[#c9a144]/10 flex items-center justify-center flex-shrink-0">
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#c9a144]" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-[#0f2557] text-sm">Login PIN</p>
+                    <p className="text-[10px] text-muted-foreground">Set a 4-digit PIN to log in with your account number</p>
+                  </div>
+                </div>
+
+                {pinStep === "set" ? (
+                  <>
+                    <p className="text-xs text-muted-foreground font-medium">Enter new 4-digit PIN</p>
+                    <PinInput
+                      length={4}
+                      value={newPin}
+                      onChange={setNewPin}
+                      onComplete={handleSetPin}
+                      disabled={pinLoading}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-muted-foreground font-medium">Confirm your new PIN</p>
+                    <PinInput
+                      length={4}
+                      value={confirmPin}
+                      onChange={setConfirmPin}
+                      onComplete={handleSetPin}
+                      disabled={pinLoading}
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => { setNewPin(""); setConfirmPin(""); setPinStep("set"); }}
+                      className="text-xs text-muted-foreground hover:text-[#0f2557] transition-colors w-full text-center"
+                    >
+                      ← Start over
+                    </button>
+                  </>
+                )}
+
+                {pinLoading && (
+                  <div className="flex items-center justify-center gap-2 py-1">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#0f2557]" />
+                    <span className="text-xs text-muted-foreground">Saving PIN…</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         )}
       </main>
     </div>

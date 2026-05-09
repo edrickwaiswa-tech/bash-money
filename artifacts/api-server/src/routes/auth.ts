@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { db, adminUsersTable, membersTable } from "@workspace/db";
 import { logger } from "../lib/logger";
 
@@ -80,7 +80,6 @@ router.post("/auth/forgot-pin/request-code", async (req, res): Promise<void> => 
     return;
   }
 
-  // Validate phone exists in members table
   const members = await db
     .select({ id: membersTable.id, phone: membersTable.phone })
     .from(membersTable)
@@ -91,13 +90,11 @@ router.post("/auth/forgot-pin/request-code", async (req, res): Promise<void> => 
     return;
   }
 
-  // Generate 6-digit OTP
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+  const expiresAt = Date.now() + 10 * 60 * 1000;
 
   pendingOtps.set(phone as string, { code, expiresAt });
 
-  // ── Simulated SMS (development) ──
   logger.info({ phone, code }, "🔐 [SIMULATED SMS] Bash M. Money Financial Services Ltd — PIN Reset Code");
   console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
   console.log(`  📱 Bash M. Money Financial Services Ltd — PIN Reset`);
@@ -106,12 +103,7 @@ router.post("/auth/forgot-pin/request-code", async (req, res): Promise<void> => 
   console.log(`  Expires in: 10 minutes`);
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
 
-  res.json({
-    success: true,
-    message: "Verification code generated",
-    // Return code in response for development/testing (remove in production)
-    devCode: code,
-  });
+  res.json({ success: true, message: "Verification code generated", devCode: code });
 });
 
 // ── POST /auth/forgot-pin/verify-code ──────────────────────────────────────
@@ -141,7 +133,6 @@ router.post("/auth/forgot-pin/verify-code", async (req, res): Promise<void> => {
     return;
   }
 
-  // Code is valid — issue a reset token (valid 10 min)
   pendingOtps.delete(phone as string);
 
   const [admin] = await db.select().from(adminUsersTable);
@@ -258,8 +249,75 @@ router.post("/auth/member/verify-otp", async (req, res): Promise<void> => {
   req.session.memberId = stored.memberId;
   req.session.memberPhone = phone as string;
 
-  req.log.info({ memberId: stored.memberId }, "Member signed in");
+  req.log.info({ memberId: stored.memberId }, "Member signed in via OTP");
   res.json({ success: true, memberId: stored.memberId });
+});
+
+// POST /auth/member/login-pin — sign in with account number (or phone) + 4-digit PIN
+router.post("/auth/member/login-pin", async (req, res): Promise<void> => {
+  const { identifier, pin } = req.body;
+
+  if (!identifier || !pin) {
+    res.status(400).json({ error: "Account identifier and PIN are required" });
+    return;
+  }
+
+  if (!/^\d{4}$/.test(pin as string)) {
+    res.status(400).json({ error: "PIN must be exactly 4 digits" });
+    return;
+  }
+
+  const id = (identifier as string).trim();
+
+  const [member] = await db
+    .select()
+    .from(membersTable)
+    .where(or(eq(membersTable.phone, id), eq(membersTable.accountNumber, id)));
+
+  if (!member) {
+    res.status(401).json({ error: "No account found. Check your account number or phone." });
+    return;
+  }
+
+  if (!member.memberPinHash) {
+    res.status(401).json({ error: "No PIN set for this account. Please log in with OTP first, then set a PIN in your profile." });
+    return;
+  }
+
+  const valid = await bcrypt.compare(pin as string, member.memberPinHash);
+  if (!valid) {
+    res.status(401).json({ error: "Incorrect PIN. Please try again." });
+    return;
+  }
+
+  req.session.memberId = member.id;
+  req.session.memberPhone = member.phone;
+
+  req.log.info({ memberId: member.id }, "Member signed in via account PIN");
+  res.json({ success: true, memberId: member.id });
+});
+
+// POST /auth/member/set-pin — set or update member's 4-digit self-service PIN
+router.post("/auth/member/set-pin", async (req, res): Promise<void> => {
+  if (!req.session.memberId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  const { pin } = req.body;
+  if (!pin || !/^\d{4}$/.test(pin as string)) {
+    res.status(400).json({ error: "PIN must be exactly 4 digits" });
+    return;
+  }
+
+  const pinHash = await bcrypt.hash(pin as string, 12);
+  await db
+    .update(membersTable)
+    .set({ memberPinHash: pinHash })
+    .where(eq(membersTable.id, req.session.memberId));
+
+  req.log.info({ memberId: req.session.memberId }, "Member PIN updated");
+  res.json({ success: true });
 });
 
 // GET /auth/member/me

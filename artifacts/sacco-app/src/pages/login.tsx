@@ -5,34 +5,129 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PinInput } from "@/components/pin-input";
 import { BmmLogo } from "@/components/bmm-logo";
-import { ShieldCheck, Lock } from "lucide-react";
+import { ShieldCheck, Lock, Phone, Hash, ArrowLeft, KeyRound } from "lucide-react";
+import { toast } from "sonner";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+type Tab = "admin" | "member";
+type MemberMethod = "otp" | "pin";
+type OtpStep = "phone" | "code";
 
 export function Login() {
   const { login } = useAuth();
   const [, navigate] = useLocation();
-  const [username, setUsername] = useState("admin");
-  const [pin, setPin] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handlePinComplete = async (completedPin: string) => {
-    if (isLoading) return;
-    setError("");
-    setIsLoading(true);
+  // ── Tab state ────────────────────────────────────────────────────────────
+  const [tab, setTab] = useState<Tab>("admin");
+
+  // ── Admin state ──────────────────────────────────────────────────────────
+  const [username, setUsername] = useState("admin");
+  const [adminPin, setAdminPin] = useState("");
+  const [adminError, setAdminError] = useState("");
+  const [adminLoading, setAdminLoading] = useState(false);
+
+  // ── Member OTP state ─────────────────────────────────────────────────────
+  const [memberMethod, setMemberMethod] = useState<MemberMethod>("otp");
+  const [otpStep, setOtpStep] = useState<OtpStep>("phone");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [devCode, setDevCode] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState("");
+
+  // ── Member PIN state ─────────────────────────────────────────────────────
+  const [identifier, setIdentifier] = useState("");
+  const [memberPin, setMemberPin] = useState("");
+  const [pinLoading, setPinLoading] = useState(false);
+  const [pinError, setPinError] = useState("");
+
+  // ── Admin handlers ────────────────────────────────────────────────────────
+  const handleAdminPinComplete = async (completedPin: string) => {
+    if (adminLoading) return;
+    setAdminError("");
+    setAdminLoading(true);
     try {
       await login(username, completedPin);
       navigate("/");
     } catch (err: any) {
-      setError(err.message ?? "Incorrect PIN");
-      setPin("");
+      setAdminError(err.message ?? "Incorrect PIN");
+      setAdminPin("");
     } finally {
-      setIsLoading(false);
+      setAdminLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // ── Member OTP handlers ───────────────────────────────────────────────────
+  const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pin.length === 4) await handlePinComplete(pin);
+    if (!phone.trim()) return;
+    setOtpError("");
+    setOtpLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/auth/member/request-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ phone: phone.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setOtpError(data.error ?? "Failed to send code"); return; }
+      setDevCode(data.devCode ?? "");
+      setOtpStep("code");
+      toast.success("Verification code sent");
+    } catch {
+      setOtpError("Network error. Please try again.");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (code: string) => {
+    setOtpError("");
+    setOtpLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/auth/member/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ phone: phone.trim(), code }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setOtpError(data.error ?? "Incorrect code"); setOtp(""); return; }
+      navigate("/my-account/portal");
+    } catch {
+      setOtpError("Network error. Please try again.");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  // ── Member PIN login handler ──────────────────────────────────────────────
+  const handlePinLogin = async (completedPin: string) => {
+    if (!identifier.trim()) { setPinError("Enter your account number or phone number"); return; }
+    setPinError("");
+    setPinLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/auth/member/login-pin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ identifier: identifier.trim(), pin: completedPin }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setPinError(data.error ?? "Login failed"); setMemberPin(""); return; }
+      navigate("/my-account/portal");
+    } catch {
+      setPinError("Network error. Please try again.");
+    } finally {
+      setPinLoading(false);
+    }
+  };
+
+  const resetMemberState = () => {
+    setOtpStep("phone"); setPhone(""); setOtp(""); setDevCode(""); setOtpError("");
+    setIdentifier(""); setMemberPin(""); setPinError("");
   };
 
   return (
@@ -43,65 +138,265 @@ export function Login() {
         <h1 className="text-white font-black text-lg tracking-widest mt-4 leading-snug uppercase">
           Bash M. Money Financial Services Ltd
         </h1>
-        <p className="text-white/50 text-xs mt-1 uppercase tracking-widest font-medium">Admin Portal</p>
+        <p className="text-white/50 text-xs mt-1 uppercase tracking-widest font-medium">Secure Portal</p>
       </div>
 
-      {/* Card floats over the banner */}
       <div className="flex-1 px-4 -mt-8 flex flex-col max-w-sm mx-auto w-full">
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
-          {/* Card header */}
-          <div className="px-6 pt-7 pb-5 text-center border-b border-gray-50">
-            <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-[#0f2557]/5 mb-3">
-              <Lock className="w-5 h-5 text-[#0f2557]" />
-            </div>
-            <p className="font-bold text-[#0f2557] text-base">Enter your PIN</p>
-            <p className="text-xs text-muted-foreground mt-0.5">4-digit admin PIN</p>
+
+          {/* Admin / Member tab toggle */}
+          <div className="flex border-b border-gray-100">
+            {(["admin", "member"] as Tab[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => { setTab(t); resetMemberState(); setAdminPin(""); setAdminError(""); }}
+                className={`flex-1 py-3.5 text-sm font-bold tracking-wide transition-all ${
+                  tab === t
+                    ? "text-[#0f2557] border-b-2 border-[#c9a144] bg-[#0f2557]/3"
+                    : "text-muted-foreground hover:text-[#0f2557]"
+                }`}
+              >
+                {t === "admin" ? "Admin Login" : "Member Login"}
+              </button>
+            ))}
           </div>
 
-          <div className="px-6 py-6">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Username</label>
-                <Input
-                  type="text"
-                  autoComplete="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  disabled={isLoading}
-                  className="text-center rounded-xl border-[#0f2557]/15 focus-visible:ring-[#0f2557] h-11"
-                />
+          {/* ── ADMIN TAB ── */}
+          {tab === "admin" && (
+            <div>
+              <div className="px-6 pt-6 pb-4 text-center">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-[#0f2557]/5 mb-3">
+                  <Lock className="w-5 h-5 text-[#0f2557]" />
+                </div>
+                <p className="font-bold text-[#0f2557] text-base">Enter your PIN</p>
+                <p className="text-xs text-muted-foreground mt-0.5">4-digit admin PIN</p>
               </div>
 
-              <PinInput
-                length={4}
-                value={pin}
-                onChange={setPin}
-                onComplete={handlePinComplete}
-                disabled={isLoading}
-                autoFocus
-              />
+              <div className="px-6 pb-6">
+                <form
+                  onSubmit={(e) => { e.preventDefault(); if (adminPin.length === 4) handleAdminPinComplete(adminPin); }}
+                  className="space-y-5"
+                >
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Username</label>
+                    <Input
+                      type="text"
+                      autoComplete="username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      disabled={adminLoading}
+                      className="text-center rounded-xl border-[#0f2557]/15 focus-visible:ring-[#0f2557] h-11"
+                    />
+                  </div>
 
-              {error && (
-                <p className="text-sm text-destructive bg-destructive/8 px-3 py-2.5 rounded-xl text-center font-medium">
-                  {error}
-                </p>
+                  <PinInput
+                    length={4}
+                    value={adminPin}
+                    onChange={setAdminPin}
+                    onComplete={handleAdminPinComplete}
+                    disabled={adminLoading}
+                    autoFocus
+                  />
+
+                  {adminError && (
+                    <p className="text-sm text-destructive bg-destructive/8 px-3 py-2.5 rounded-xl text-center font-medium">{adminError}</p>
+                  )}
+
+                  <Button
+                    type="submit"
+                    className="w-full h-11 rounded-xl bg-[#0f2557] hover:bg-[#1a3570] text-white font-semibold"
+                    disabled={adminLoading || adminPin.length < 4}
+                  >
+                    {adminLoading ? "Signing in…" : "Sign In"}
+                  </Button>
+
+                  <div className="text-center">
+                    <Link href="/forgot-pin" className="text-sm text-[#c9a144] hover:text-[#0f2557] font-semibold transition-colors">
+                      Forgot PIN?
+                    </Link>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* ── MEMBER TAB ── */}
+          {tab === "member" && (
+            <div>
+              {/* Method sub-toggle */}
+              <div className="flex gap-2 px-5 pt-5 pb-1">
+                <button
+                  onClick={() => { setMemberMethod("otp"); resetMemberState(); }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+                    memberMethod === "otp"
+                      ? "bg-[#0f2557] text-white border-[#0f2557]"
+                      : "bg-white text-muted-foreground border-gray-200 hover:border-[#0f2557]/30"
+                  }`}
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  Phone + OTP
+                </button>
+                <button
+                  onClick={() => { setMemberMethod("pin"); resetMemberState(); }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+                    memberMethod === "pin"
+                      ? "bg-[#0f2557] text-white border-[#0f2557]"
+                      : "bg-white text-muted-foreground border-gray-200 hover:border-[#0f2557]/30"
+                  }`}
+                >
+                  <Hash className="w-3.5 h-3.5" />
+                  Account + PIN
+                </button>
+              </div>
+
+              {/* ── OTP flow ── */}
+              {memberMethod === "otp" && otpStep === "phone" && (
+                <div>
+                  <div className="px-6 pt-4 pb-3 text-center">
+                    <div className="inline-flex items-center justify-center w-9 h-9 rounded-2xl bg-[#0f2557]/5 mb-2">
+                      <Phone className="w-4 h-4 text-[#0f2557]" />
+                    </div>
+                    <p className="font-bold text-[#0f2557] text-sm">Sign in to your account</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Enter your registered phone number</p>
+                  </div>
+                  <div className="px-6 pb-6">
+                    <form onSubmit={handleRequestOtp} className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Phone Number</label>
+                        <Input
+                          type="tel"
+                          placeholder="+256 700 000000"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          disabled={otpLoading}
+                          autoFocus
+                          className="text-center rounded-xl border-[#0f2557]/15 focus-visible:ring-[#0f2557] h-11"
+                        />
+                      </div>
+                      {otpError && <p className="text-sm text-destructive bg-destructive/8 px-3 py-2.5 rounded-xl text-center font-medium">{otpError}</p>}
+                      <Button
+                        type="submit"
+                        className="w-full h-11 rounded-xl bg-[#0f2557] hover:bg-[#1a3570] text-white font-semibold"
+                        disabled={otpLoading || !phone.trim()}
+                      >
+                        {otpLoading ? "Sending…" : "Send Verification Code"}
+                      </Button>
+                    </form>
+                  </div>
+                </div>
               )}
 
-              <Button
-                type="submit"
-                className="w-full h-11 rounded-xl bg-[#0f2557] hover:bg-[#1a3570] text-white font-semibold text-sm transition-all"
-                disabled={isLoading || pin.length < 4}
-              >
-                {isLoading ? "Signing in…" : "Sign In"}
-              </Button>
+              {memberMethod === "otp" && otpStep === "code" && (
+                <div>
+                  <div className="px-6 pt-4 pb-3 text-center relative">
+                    <button
+                      onClick={() => { setOtpStep("phone"); setOtp(""); setDevCode(""); setOtpError(""); }}
+                      className="absolute left-4 top-5 text-muted-foreground hover:text-[#0f2557] transition-colors"
+                    >
+                      <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div className="inline-flex items-center justify-center w-9 h-9 rounded-2xl bg-[#0f2557]/5 mb-2">
+                      <Lock className="w-4 h-4 text-[#0f2557]" />
+                    </div>
+                    <p className="font-bold text-[#0f2557] text-sm">Enter verification code</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Sent to <span className="font-semibold text-[#0f2557]">{phone}</span>
+                    </p>
+                  </div>
+                  <div className="px-6 pb-6 space-y-4">
+                    {devCode && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-center">
+                        <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider mb-1">Test mode — your code</p>
+                        <p className="text-2xl font-black tracking-[0.3em] text-amber-700">{devCode}</p>
+                      </div>
+                    )}
+                    <PinInput
+                      length={6}
+                      value={otp}
+                      onChange={setOtp}
+                      onComplete={handleVerifyOtp}
+                      disabled={otpLoading}
+                      autoFocus
+                    />
+                    {otpError && <p className="text-sm text-destructive bg-destructive/8 px-3 py-2.5 rounded-xl text-center font-medium">{otpError}</p>}
+                    <Button
+                      className="w-full h-11 rounded-xl bg-[#0f2557] hover:bg-[#1a3570] text-white font-semibold"
+                      disabled={otpLoading || otp.length < 6}
+                      onClick={() => handleVerifyOtp(otp)}
+                    >
+                      {otpLoading ? "Verifying…" : "Verify & Sign In"}
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={handleRequestOtp as any}
+                      className="w-full text-sm text-[#c9a144] hover:text-[#0f2557] font-semibold transition-colors"
+                      disabled={otpLoading}
+                    >
+                      Resend code
+                    </button>
+                  </div>
+                </div>
+              )}
 
-              <div className="text-center">
-                <Link href="/forgot-pin" className="text-sm text-[#c9a144] hover:text-[#0f2557] font-semibold transition-colors">
-                  Forgot PIN?
-                </Link>
-              </div>
-            </form>
-          </div>
+              {/* ── Account Number + PIN flow ── */}
+              {memberMethod === "pin" && (
+                <div>
+                  <div className="px-6 pt-4 pb-3 text-center">
+                    <div className="inline-flex items-center justify-center w-9 h-9 rounded-2xl bg-[#0f2557]/5 mb-2">
+                      <KeyRound className="w-4 h-4 text-[#0f2557]" />
+                    </div>
+                    <p className="font-bold text-[#0f2557] text-sm">Sign in with PIN</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Use your account number or phone + 4-digit PIN</p>
+                  </div>
+                  <div className="px-6 pb-6 space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Account Number or Phone</label>
+                      <Input
+                        type="text"
+                        placeholder="BMMFS-2026-00001 or +256…"
+                        value={identifier}
+                        onChange={(e) => setIdentifier(e.target.value)}
+                        disabled={pinLoading}
+                        autoFocus
+                        className="text-center font-mono rounded-xl border-[#0f2557]/15 focus-visible:ring-[#0f2557] h-11"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">4-Digit PIN</label>
+                      <PinInput
+                        length={4}
+                        value={memberPin}
+                        onChange={setMemberPin}
+                        onComplete={handlePinLogin}
+                        disabled={pinLoading || !identifier.trim()}
+                      />
+                    </div>
+
+                    {pinError && <p className="text-sm text-destructive bg-destructive/8 px-3 py-2.5 rounded-xl text-center font-medium">{pinError}</p>}
+
+                    <Button
+                      className="w-full h-11 rounded-xl bg-[#0f2557] hover:bg-[#1a3570] text-white font-semibold"
+                      disabled={pinLoading || memberPin.length < 4 || !identifier.trim()}
+                      onClick={() => handlePinLogin(memberPin)}
+                    >
+                      {pinLoading ? "Signing in…" : "Sign In"}
+                    </Button>
+
+                    <p className="text-center text-xs text-muted-foreground">
+                      No PIN yet?{" "}
+                      <button
+                        className="text-[#c9a144] font-semibold hover:text-[#0f2557] transition-colors"
+                        onClick={() => setMemberMethod("otp")}
+                      >
+                        Log in with OTP first to set one
+                      </button>
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Trust footer */}

@@ -11,6 +11,7 @@ export const membersTable = pgTable("members", {
   joinDate: text("join_date").notNull(),
   profilePictureUrl: text("profile_picture_url"),
   signatureUrl: text("signature_url"),
+  memberPinHash: text("member_pin_hash"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
