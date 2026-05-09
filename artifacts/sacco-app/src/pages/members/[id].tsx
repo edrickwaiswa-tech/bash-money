@@ -63,6 +63,7 @@ export function MemberDetail() {
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isResettingPin, setIsResettingPin] = useState(false);
   const [editData, setEditData] = useState({ name: "", phone: "", idNumber: "" });
   const [isExporting, setIsExporting] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -104,6 +105,24 @@ export function MemberDetail() {
   };
 
   const handleDelete = () => deleteMember.mutate({ memberId });
+
+  const handleResetPin = async () => {
+    if (!confirm("Reset this member's PIN? They will need to set a new PIN via OTP login.")) return;
+    setIsResettingPin(true);
+    try {
+      const res = await fetch(`${BASE}/api/auth/member/${memberId}/reset-pin`, {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success("Member PIN has been reset. They can now set a new PIN via OTP login.");
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to reset PIN");
+    } finally {
+      setIsResettingPin(false);
+    }
+  };
 
   const copyAccountNumber = async () => {
     if (!profile?.accountNumber) return;
@@ -450,6 +469,33 @@ export function MemberDetail() {
               >
                 <Trash2 className="h-4 w-4" /> Delete
               </Button>
+            </div>
+
+            {/* Reset Member PIN */}
+            <div className="bg-white rounded-2xl shadow-sm border border-amber-100 overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-50 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-[#0f2557] text-sm">Member PIN</h3>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Reset the member's self-service login PIN</p>
+                </div>
+              </div>
+              <div className="px-5 py-4 space-y-3">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  If a member has forgotten their PIN, you can clear it here. They will then need to sign in via OTP to set a new PIN.
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 h-10 rounded-xl border-amber-200 text-amber-700 hover:bg-amber-50 transition-all text-sm font-semibold"
+                  onClick={handleResetPin}
+                  disabled={isResettingPin}
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  {isResettingPin ? "Resetting…" : "Reset Member PIN"}
+                </Button>
+              </div>
             </div>
           </TabsContent>
 

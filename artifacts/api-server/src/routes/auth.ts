@@ -373,6 +373,79 @@ router.post("/auth/member/set-pin", async (req, res): Promise<void> => {
   res.json({ success: true });
 });
 
+// POST /auth/member/change-pin — member self-service PIN change (verifies current PIN if one exists)
+router.post("/auth/member/change-pin", async (req, res): Promise<void> => {
+  if (!req.session.memberId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  const { currentPin, newPin, confirmPin } = req.body;
+
+  if (!newPin || !/^\d{4}$/.test(newPin as string)) {
+    res.status(400).json({ error: "New PIN must be exactly 4 digits" });
+    return;
+  }
+
+  if (newPin !== confirmPin) {
+    res.status(400).json({ error: "New PIN and confirmation do not match" });
+    return;
+  }
+
+  const [member] = await db
+    .select()
+    .from(membersTable)
+    .where(eq(membersTable.id, req.session.memberId));
+
+  if (!member) {
+    res.status(404).json({ error: "Member not found" });
+    return;
+  }
+
+  if (member.memberPinHash) {
+    if (!currentPin) {
+      res.status(400).json({ error: "Current PIN is required" });
+      return;
+    }
+    const valid = await bcrypt.compare(currentPin as string, member.memberPinHash);
+    if (!valid) {
+      res.status(401).json({ error: "Current PIN is incorrect" });
+      return;
+    }
+  }
+
+  const pinHash = await bcrypt.hash(newPin as string, 12);
+  await db
+    .update(membersTable)
+    .set({ memberPinHash: pinHash })
+    .where(eq(membersTable.id, req.session.memberId));
+
+  req.log.info({ memberId: req.session.memberId }, "Member PIN changed");
+  res.json({ success: true });
+});
+
+// POST /auth/member/:memberId/reset-pin — admin resets a member's PIN (clears it)
+router.post("/auth/member/:memberId/reset-pin", async (req, res): Promise<void> => {
+  if (!req.session.adminId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const memberId = parseInt(req.params.memberId as string, 10);
+  if (isNaN(memberId)) {
+    res.status(400).json({ error: "Invalid member ID" });
+    return;
+  }
+
+  await db
+    .update(membersTable)
+    .set({ memberPinHash: null })
+    .where(eq(membersTable.id, memberId));
+
+  req.log.info({ adminId: req.session.adminId, memberId }, "Admin reset member PIN");
+  res.json({ success: true });
+});
+
 // GET /auth/member/me
 router.get("/auth/member/me", async (req, res): Promise<void> => {
   if (!req.session.memberId) {

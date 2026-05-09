@@ -15,6 +15,7 @@ import {
   Wallet, Landmark, LogOut, FileDown, TrendingUp, TrendingDown,
   User, Phone, CreditCard, Calendar, RefreshCw, Bell, BellOff,
   CheckCheck, ArrowUpCircle, ArrowDownCircle, ShieldCheck, Hash,
+  KeyRound, CheckCircle2,
 } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -40,11 +41,14 @@ export function MemberPortal() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifsLoading, setNotifsLoading] = useState(false);
 
-  // PIN setup state
-  const [newPin, setNewPin] = useState("");
-  const [confirmPin, setConfirmPin] = useState("");
-  const [pinStep, setPinStep] = useState<"set" | "confirm">("set");
-  const [pinLoading, setPinLoading] = useState(false);
+  // Change PIN state
+  const [cpCurrent, setCpCurrent] = useState("");
+  const [cpNew, setCpNew] = useState("");
+  const [cpConfirm, setCpConfirm] = useState("");
+  const [cpLoading, setCpLoading] = useState(false);
+  const [cpError, setCpError] = useState("");
+  const [cpCurrentErr, setCpCurrentErr] = useState(false);
+  const [cpSuccess, setCpSuccess] = useState(false);
 
   useEffect(() => {
     fetch(`${BASE}/api/auth/member/me`, { credentials: "same-origin" })
@@ -134,35 +138,34 @@ export function MemberPortal() {
     }
   };
 
-  const handleSetPin = async (pin: string) => {
-    if (pinStep === "set") {
-      setNewPin(pin);
-      setPinStep("confirm");
-      setConfirmPin("");
-      return;
-    }
-    // confirm step
-    if (pin !== newPin) {
-      toast.error("PINs don't match. Please try again.");
-      setNewPin(""); setConfirmPin(""); setPinStep("set");
-      return;
-    }
-    setPinLoading(true);
+  const handleChangePin = async () => {
+    setCpError("");
+    setCpCurrentErr(false);
+    if (cpNew.length < 4) { setCpError("New PIN must be 4 digits"); return; }
+    if (cpNew !== cpConfirm) { setCpError("New PIN and confirmation do not match"); return; }
+    setCpLoading(true);
     try {
-      const res = await fetch(`${BASE}/api/auth/member/set-pin`, {
+      const res = await fetch(`${BASE}/api/auth/member/change-pin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ pin }),
+        body: JSON.stringify({ currentPin: cpCurrent || undefined, newPin: cpNew, confirmPin: cpConfirm }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Failed to set PIN"); }
-      else { toast.success("PIN set successfully! You can now log in with your account number + PIN."); }
+      if (!res.ok) {
+        if (data.error?.toLowerCase().includes("current")) {
+          setCpCurrentErr(true);
+        }
+        setCpError(data.error ?? "Failed to change PIN");
+      } else {
+        setCpSuccess(true);
+        setCpCurrent(""); setCpNew(""); setCpConfirm("");
+        setTimeout(() => setCpSuccess(false), 4000);
+      }
     } catch {
-      toast.error("Network error. Please try again.");
+      setCpError("Network error. Please try again.");
     } finally {
-      setPinLoading(false);
-      setNewPin(""); setConfirmPin(""); setPinStep("set");
+      setCpLoading(false);
     }
   };
 
@@ -456,55 +459,77 @@ export function MemberPortal() {
               </CardContent>
             </Card>
 
-            {/* PIN setup card */}
+            {/* Change PIN card */}
             <Card className="rounded-2xl border-[#c9a144]/20 shadow-sm">
-              <CardContent className="p-4 space-y-3">
+              <CardContent className="p-4 space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b border-gray-50">
                   <div className="w-7 h-7 rounded-lg bg-[#c9a144]/10 flex items-center justify-center flex-shrink-0">
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#c9a144]" />
+                    <KeyRound className="w-3.5 h-3.5 text-[#c9a144]" />
                   </div>
                   <div>
-                    <p className="font-bold text-[#0f2557] text-sm">Login PIN</p>
-                    <p className="text-[10px] text-muted-foreground">Set a 4-digit PIN to log in with your account number</p>
+                    <p className="font-bold text-[#0f2557] text-sm">Security — Change PIN</p>
+                    <p className="text-[10px] text-muted-foreground">Update your 4-digit login PIN</p>
                   </div>
                 </div>
 
-                {pinStep === "set" ? (
-                  <>
-                    <p className="text-xs text-muted-foreground font-medium">Enter new 4-digit PIN</p>
-                    <PinInput
-                      length={4}
-                      value={newPin}
-                      onChange={setNewPin}
-                      onComplete={handleSetPin}
-                      disabled={pinLoading}
-                    />
-                  </>
+                {cpSuccess ? (
+                  <div className="flex flex-col items-center gap-2 py-4">
+                    <CheckCircle2 className="w-10 h-10 text-emerald-500" />
+                    <p className="text-sm font-bold text-emerald-700">PIN changed successfully!</p>
+                    <p className="text-xs text-muted-foreground text-center">Use your new PIN next time you sign in.</p>
+                  </div>
                 ) : (
                   <>
-                    <p className="text-xs text-muted-foreground font-medium">Confirm your new PIN</p>
-                    <PinInput
-                      length={4}
-                      value={confirmPin}
-                      onChange={setConfirmPin}
-                      onComplete={handleSetPin}
-                      disabled={pinLoading}
-                      autoFocus
-                    />
-                    <button
-                      onClick={() => { setNewPin(""); setConfirmPin(""); setPinStep("set"); }}
-                      className="text-xs text-muted-foreground hover:text-[#0f2557] transition-colors w-full text-center"
-                    >
-                      ← Start over
-                    </button>
-                  </>
-                )}
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+                        Current PIN <span className="normal-case font-normal">(leave blank if setting for the first time)</span>
+                      </p>
+                      <PinInput
+                        length={4}
+                        value={cpCurrent}
+                        onChange={(v) => { setCpCurrent(v); setCpError(""); setCpCurrentErr(false); }}
+                        disabled={cpLoading}
+                        error={cpCurrentErr}
+                      />
+                    </div>
 
-                {pinLoading && (
-                  <div className="flex items-center justify-center gap-2 py-1">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#0f2557]" />
-                    <span className="text-xs text-muted-foreground">Saving PIN…</span>
-                  </div>
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">New PIN</p>
+                      <PinInput
+                        length={4}
+                        value={cpNew}
+                        onChange={(v) => { setCpNew(v); setCpError(""); }}
+                        disabled={cpLoading}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Confirm New PIN</p>
+                      <PinInput
+                        length={4}
+                        value={cpConfirm}
+                        onChange={(v) => { setCpConfirm(v); setCpError(""); }}
+                        onComplete={() => { if (cpNew.length === 4) handleChangePin(); }}
+                        disabled={cpLoading}
+                      />
+                    </div>
+
+                    {cpError && (
+                      <p className="text-xs text-destructive bg-destructive/8 px-3 py-2 rounded-xl text-center font-medium">{cpError}</p>
+                    )}
+
+                    <Button
+                      className="w-full h-10 rounded-xl bg-[#0f2557] hover:bg-[#1a3570] text-white font-semibold text-sm"
+                      onClick={handleChangePin}
+                      disabled={cpLoading || cpNew.length < 4 || cpConfirm.length < 4}
+                    >
+                      {cpLoading ? (
+                        <span className="flex items-center gap-2">
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving…
+                        </span>
+                      ) : "Change PIN"}
+                    </Button>
+                  </>
                 )}
               </CardContent>
             </Card>
