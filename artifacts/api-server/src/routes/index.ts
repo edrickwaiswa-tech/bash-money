@@ -5,11 +5,13 @@ import membersRouter from "./members";
 import transactionsRouter from "./transactions";
 import dashboardRouter from "./dashboard";
 import memberNotificationsRouter from "./member-notifications";
+import uploadsRouter from "./uploads";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+router.use(uploadsRouter);
 router.use(membersRouter);
 router.use(transactionsRouter);
 router.use(dashboardRouter);

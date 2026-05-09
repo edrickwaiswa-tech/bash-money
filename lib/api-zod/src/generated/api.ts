@@ -23,10 +23,13 @@ export const ListMembersQueryParams = zod.object({
 
 export const ListMembersResponseItem = zod.object({
   id: zod.number(),
+  accountNumber: zod.string(),
   name: zod.string(),
   phone: zod.string(),
   idNumber: zod.string(),
   joinDate: zod.string(),
+  profilePictureUrl: zod.string().nullish(),
+  signatureUrl: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const ListMembersResponse = zod.array(ListMembersResponseItem);
@@ -50,10 +53,13 @@ export const GetMemberParams = zod.object({
 
 export const GetMemberResponse = zod.object({
   id: zod.number(),
+  accountNumber: zod.string(),
   name: zod.string(),
   phone: zod.string(),
   idNumber: zod.string(),
   joinDate: zod.string(),
+  profilePictureUrl: zod.string().nullish(),
+  signatureUrl: zod.string().nullish(),
   createdAt: zod.string(),
   totalSavings: zod
     .number()
@@ -78,10 +84,13 @@ export const UpdateMemberBody = zod.object({
 
 export const UpdateMemberResponse = zod.object({
   id: zod.number(),
+  accountNumber: zod.string(),
   name: zod.string(),
   phone: zod.string(),
   idNumber: zod.string(),
   joinDate: zod.string(),
+  profilePictureUrl: zod.string().nullish(),
+  signatureUrl: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -106,10 +115,13 @@ export const GetMemberLedgerParams = zod.object({
 export const GetMemberLedgerResponse = zod.object({
   member: zod.object({
     id: zod.number(),
+    accountNumber: zod.string(),
     name: zod.string(),
     phone: zod.string(),
     idNumber: zod.string(),
     joinDate: zod.string(),
+    profilePictureUrl: zod.string().nullish(),
+    signatureUrl: zod.string().nullish(),
     createdAt: zod.string(),
   }),
   entries: zod.array(

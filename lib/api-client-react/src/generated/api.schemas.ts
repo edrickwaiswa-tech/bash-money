@@ -19,19 +19,25 @@ export interface DeleteResponse {
 
 export interface Member {
   id: number;
+  accountNumber: string;
   name: string;
   phone: string;
   idNumber: string;
   joinDate: string;
+  profilePictureUrl?: string | null;
+  signatureUrl?: string | null;
   createdAt: string;
 }
 
 export interface MemberProfile {
   id: number;
+  accountNumber: string;
   name: string;
   phone: string;
   idNumber: string;
   joinDate: string;
+  profilePictureUrl?: string | null;
+  signatureUrl?: string | null;
   createdAt: string;
   /** Lifetime total credits (savings deposits + loan repayments) */
   totalSavings: number;

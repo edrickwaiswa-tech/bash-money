@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Search, UserPlus, Phone, CreditCard, ChevronRight } from "lucide-react";
+import { Search, UserPlus, Phone, CreditCard, ChevronRight, Hash } from "lucide-react";
 import { toast } from "sonner";
 
 export function MembersList() {
@@ -123,26 +123,38 @@ export function MembersList() {
             No members found.
           </div>
         ) : (
-          members?.map(member => (
-            <Link key={member.id} href={`/members/${member.id}`} className="block">
-              <Card className="p-4 hover:border-primary/50 transition-colors flex items-center justify-between group">
-                <div className="space-y-1">
-                  <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">{member.name}</h3>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      {member.phone}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <CreditCard className="h-3 w-3" />
-                      {member.idNumber}
-                    </span>
+          members?.map(member => {
+            const initials = member.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase();
+            return (
+              <Link key={member.id} href={`/members/${member.id}`} className="block">
+                <Card className="p-4 hover:border-primary/50 transition-colors flex items-center gap-3 group">
+                  <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center bg-primary/10 border border-primary/20 overflow-hidden">
+                    {(member as any).profilePictureUrl ? (
+                      <img src={(member as any).profilePictureUrl} alt={member.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-primary font-bold text-sm">{initials}</span>
+                    )}
                   </div>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </Card>
-            </Link>
-          ))
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <h3 className="font-semibold text-sm group-hover:text-primary transition-colors truncate">{member.name}</h3>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                      {(member as any).accountNumber && (
+                        <span className="flex items-center gap-1 font-mono font-medium text-foreground/70">
+                          <Hash className="h-3 w-3" />
+                          {(member as any).accountNumber}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        {member.phone}
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                </Card>
+              </Link>
+            );
+          })
         )}
       </div>
     </div>

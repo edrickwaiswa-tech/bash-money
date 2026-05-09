@@ -85,11 +85,10 @@ export function MemberPortal() {
   };
 
   useEffect(() => {
-    if (memberId) {
-      fetchUnreadCount();
-      const interval = setInterval(fetchUnreadCount, 30_000);
-      return () => clearInterval(interval);
-    }
+    if (!memberId) return;
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30_000);
+    return () => clearInterval(interval);
   }, [memberId, fetchUnreadCount]);
 
   useEffect(() => {

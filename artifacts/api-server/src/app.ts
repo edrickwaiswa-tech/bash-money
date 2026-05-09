@@ -3,9 +3,12 @@ import cors from "cors";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pinoHttp from "pino-http";
+import path from "path";
+import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
 const PgStore = connectPgSimple(session);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app: Express = express();
 
@@ -52,5 +55,9 @@ app.use(
 );
 
 app.use("/api", router);
+
+// Serve uploaded files as static assets
+const uploadsPath = path.resolve(__dirname, "..", "uploads");
+app.use("/api/uploads", express.static(uploadsPath));
 
 export default app;

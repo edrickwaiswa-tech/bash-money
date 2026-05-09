@@ -290,6 +290,8 @@ components:
       properties:
         id:
           type: integer
+        accountNumber:
+          type: string
         name:
           type: string
         phone:
@@ -298,10 +300,17 @@ components:
           type: string
         joinDate:
           type: string
+        profilePictureUrl:
+          type: string
+          nullable: true
+        signatureUrl:
+          type: string
+          nullable: true
         createdAt:
           type: string
       required:
         - id
+        - accountNumber
         - name
         - phone
         - idNumber
@@ -313,6 +322,8 @@ components:
       properties:
         id:
           type: integer
+        accountNumber:
+          type: string
         name:
           type: string
         phone:
@@ -321,6 +332,12 @@ components:
           type: string
         joinDate:
           type: string
+        profilePictureUrl:
+          type: string
+          nullable: true
+        signatureUrl:
+          type: string
+          nullable: true
         createdAt:
           type: string
         totalSavings:
@@ -334,6 +351,7 @@ components:
           description: Net balance (credits - debits)
       required:
         - id
+        - accountNumber
         - name
         - phone
         - idNumber
