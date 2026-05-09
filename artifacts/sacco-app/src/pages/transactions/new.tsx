@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
-import { 
+import {
   useListMembers, getListMembersQueryKey,
   useCreateTransaction, CreateTransactionBodyType, TransactionReceipt
 } from "@workspace/api-client-react";
@@ -24,11 +24,10 @@ export function NewTransaction() {
   const [type, setType] = useState<CreateTransactionBodyType>("SAVINGS_DEPOSIT");
   const [amount, setAmount] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
-
   const [receipt, setReceipt] = useState<TransactionReceipt | null>(null);
 
   const { data: members, isLoading: isLoadingMembers } = useListMembers(
-    undefined, 
+    undefined,
     { query: { queryKey: getListMembersQueryKey() } }
   );
 
@@ -50,7 +49,6 @@ export function NewTransaction() {
       toast.error("Please fill all required fields correctly");
       return;
     }
-
     createTx.mutate({
       data: {
         memberId: parseInt(memberId, 10),
@@ -63,53 +61,67 @@ export function NewTransaction() {
 
   const handleShareWhatsApp = () => {
     if (!receipt) return;
-    const text = `SACCO Receipt\nRef: ${receipt.transactionRef}\nMember: ${receipt.memberName}\nType: ${formatTransactionType(receipt.type)}\nAmount: ${formatCurrency(receipt.amount)}\nDate: ${formatDate(receipt.createdAt)}\nBalance: ${formatCurrency(receipt.runningBalance)}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    const text = [
+      `*Bash M. Money And Financial Services Ltd*`,
+      `Transaction Receipt`,
+      ``,
+      `Ref: ${receipt.transactionRef}`,
+      `Member: ${receipt.memberName}`,
+      `Type: ${formatTransactionType(receipt.type)}`,
+      `Amount: ${formatCurrency(receipt.amount)}`,
+      `Date: ${formatDate(receipt.createdAt)}`,
+      `Balance: ${formatCurrency(receipt.runningBalance)}`,
+      ``,
+      `_Secured & Encrypted — Bash M. Money And Financial Services Ltd_`,
+    ].join("\n");
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
   const handleDone = () => {
-    if (receipt) {
-      setLocation(`/members/${receipt.memberId}`);
-    } else {
-      setLocation("/");
-    }
+    if (receipt) setLocation(`/members/${receipt.memberId}`);
+    else setLocation("/");
   };
 
   return (
-    <div className="p-4 space-y-6 max-w-md mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">New Transaction</h1>
-        <p className="text-sm text-muted-foreground">Record a deposit, withdrawal, or loan.</p>
+    <div className="bg-[#f4f6fb] min-h-screen">
+      {/* Page hero */}
+      <div className="bg-[#0f2557] px-4 pt-6 pb-10">
+        <h1 className="text-white font-black text-xl tracking-tight">New Transaction</h1>
+        <p className="text-white/50 text-xs mt-1">Record a deposit, withdrawal, or loan</p>
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Member</Label>
+      <div className="px-4 -mt-6 pb-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <form onSubmit={handleSubmit} className="p-5 space-y-5">
+            {/* Member */}
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Member</Label>
               <Select value={memberId} onValueChange={setMemberId} disabled={!!initialMemberId}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl border-[#0f2557]/15 h-11 focus:ring-[#0f2557]">
                   <SelectValue placeholder="Select a member" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-xl">
                   {isLoadingMembers ? (
-                    <SelectItem value="loading" disabled>Loading...</SelectItem>
+                    <SelectItem value="loading" disabled>Loading…</SelectItem>
                   ) : (
                     members?.map(m => (
-                      <SelectItem key={m.id} value={m.id.toString()}>{m.name} ({m.idNumber})</SelectItem>
+                      <SelectItem key={m.id} value={m.id.toString()}>
+                        {m.name} — {m.idNumber}
+                      </SelectItem>
                     ))
                   )}
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Transaction Type</Label>
+            {/* Transaction Type */}
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Transaction Type</Label>
               <Select value={type} onValueChange={(val: CreateTransactionBodyType) => setType(val)}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl border-[#0f2557]/15 h-11 focus:ring-[#0f2557]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-xl">
                   <SelectItem value="SAVINGS_DEPOSIT">Savings Deposit</SelectItem>
                   <SelectItem value="WITHDRAWAL">Savings Withdrawal</SelectItem>
                   <SelectItem value="LOAN_DISBURSEMENT">Loan Disbursement</SelectItem>
@@ -118,92 +130,103 @@ export function NewTransaction() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Amount (USh)</Label>
-              <Input 
-                type="number" 
-                placeholder="e.g. 50000" 
-                value={amount} 
+            {/* Amount */}
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Amount (USh)</Label>
+              <Input
+                type="number"
+                placeholder="e.g. 50,000"
+                value={amount}
                 onChange={e => setAmount(e.target.value)}
                 min="1"
                 step="1"
                 required
+                className="rounded-xl border-[#0f2557]/15 focus-visible:ring-[#0f2557] h-11"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Notes (Optional)</Label>
-              <Textarea 
-                placeholder="Add any relevant details..." 
-                value={notes} 
+            {/* Notes */}
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Notes (Optional)</Label>
+              <Textarea
+                placeholder="Add any relevant details…"
+                value={notes}
                 onChange={e => setNotes(e.target.value)}
-                className="resize-none h-20"
+                className="resize-none h-20 rounded-xl border-[#0f2557]/15 focus-visible:ring-[#0f2557]"
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={createTx.isPending}>
-              {createTx.isPending ? "Processing..." : "Record Transaction"}
+            <Button
+              type="submit"
+              className="w-full h-12 rounded-xl bg-[#0f2557] hover:bg-[#1a3570] text-white font-bold text-sm"
+              disabled={createTx.isPending}
+            >
+              {createTx.isPending ? "Processing…" : "Record Transaction"}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Receipt Modal */}
       <Dialog open={!!receipt} onOpenChange={(open) => !open && handleDone()}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader className="flex flex-col items-center sm:items-center space-y-2 pb-4 border-b">
-            <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center text-primary mb-2">
-              <CheckCircle2 className="h-6 w-6" />
+        <DialogContent className="sm:max-w-md rounded-2xl overflow-hidden p-0">
+          {/* Navy header */}
+          <div className="bg-[#0f2557] px-6 py-6 text-center">
+            <div className="w-14 h-14 rounded-full bg-white/10 border-2 border-[#c9a144]/60 flex items-center justify-center mx-auto mb-3">
+              <CheckCircle2 className="h-7 w-7 text-[#c9a144]" />
             </div>
-            <DialogTitle className="text-xl">Transaction Successful</DialogTitle>
-          </DialogHeader>
-          
+            <DialogTitle className="text-white font-black text-lg">Transaction Successful</DialogTitle>
+            <p className="text-white/50 text-[10px] mt-1 uppercase tracking-widest">Bash M. Money And Financial Services Ltd</p>
+          </div>
+
           {receipt && (
-            <div className="space-y-4 py-4">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground">Receipt No.</span>
-                <span className="font-mono font-medium">{receipt.transactionRef}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground">Date</span>
-                <span>{formatDate(receipt.createdAt)}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground">Member</span>
-                <span className="font-medium">{receipt.memberName}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground">Type</span>
-                <span>{formatTransactionType(receipt.type)}</span>
-              </div>
-              
-              <div className="my-4 pt-4 border-t flex justify-between items-center">
-                <span className="font-medium">Amount</span>
-                <span className={`text-xl font-bold ${receipt.direction === 'credit' ? 'text-primary' : 'text-destructive'}`}>
+            <div className="px-6 py-5 space-y-0">
+              {[
+                { label: "Receipt No.", value: receipt.transactionRef, mono: true },
+                { label: "Date", value: formatDate(receipt.createdAt) },
+                { label: "Member", value: receipt.memberName, bold: true },
+                { label: "Type", value: formatTransactionType(receipt.type) },
+              ].map(({ label, value, mono, bold }) => (
+                <div key={label} className="flex justify-between items-center py-3 border-b border-gray-50 last:border-0">
+                  <span className="text-sm text-muted-foreground">{label}</span>
+                  <span className={`text-sm ${mono ? "font-mono" : ""} ${bold ? "font-semibold text-[#0f2557]" : "text-[#0f2557]"}`}>{value}</span>
+                </div>
+              ))}
+
+              {/* Amount highlight */}
+              <div className="bg-[#0f2557]/5 rounded-xl px-4 py-4 mt-3 flex justify-between items-center">
+                <span className="font-bold text-[#0f2557]">Amount</span>
+                <span className={`text-2xl font-black ${receipt.direction === "credit" ? "text-emerald-600" : "text-destructive"}`}>
                   {formatCurrency(receipt.amount)}
                 </span>
               </div>
-              
-              <div className="flex justify-between items-center text-sm pt-4 border-t">
-                <span className="text-muted-foreground">Running Balance</span>
-                <span className={`font-semibold ${receipt.runningBalance >= 0 ? 'text-primary' : 'text-destructive'}`}>
+
+              <div className="flex justify-between items-center pt-3">
+                <span className="text-sm text-muted-foreground">Running Balance</span>
+                <span className={`font-bold text-sm ${receipt.runningBalance >= 0 ? "text-[#0f2557]" : "text-destructive"}`}>
                   {formatCurrency(receipt.runningBalance)}
                 </span>
               </div>
             </div>
           )}
 
-          <DialogFooter className="flex-col sm:flex-col gap-2 mt-4">
-            <Button className="w-full gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white" onClick={handleShareWhatsApp}>
+          <DialogFooter className="flex-col gap-2 px-6 pb-6 mt-1">
+            <Button
+              className="w-full gap-2 h-11 rounded-xl bg-[#25D366] hover:bg-[#128C7E] text-white font-semibold"
+              onClick={handleShareWhatsApp}
+            >
               <Share2 className="h-4 w-4" /> Share via WhatsApp
             </Button>
-            <Button variant="outline" className="w-full" onClick={handleDone}>
+            <Button
+              variant="outline"
+              className="w-full h-11 rounded-xl border-[#0f2557]/20 text-[#0f2557] hover:bg-[#0f2557] hover:text-white transition-all"
+              onClick={handleDone}
+            >
               Done
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
