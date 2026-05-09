@@ -121,11 +121,11 @@ export function MemberPortal() {
     navigate("/login");
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (!profile || !ledger) return;
     setIsExporting(true);
     try {
-      exportMemberStatementPDF(profile, ledger);
+      await exportMemberStatementPDF(profile, ledger);
       toast.success("Statement exported as PDF");
     } catch {
       toast.error("Failed to export PDF");
