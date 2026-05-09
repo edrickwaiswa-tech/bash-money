@@ -282,12 +282,16 @@ export function MemberDetail() {
       </div>
 
       {/* Net Balance strip */}
-      <div className="mx-4 -mt-4 bg-white rounded-2xl shadow-md px-5 py-3 flex items-center justify-between border border-gray-100">
+      <div className="mx-4 -mt-4 bg-white rounded-2xl shadow-lg border border-[#c9a144]/20 px-5 py-3.5 flex items-center justify-between"
+        style={{ boxShadow: "0 4px 20px rgba(15,37,87,0.10), 0 1px 4px rgba(201,161,68,0.08)" }}
+      >
         <div className="flex items-center gap-2">
-          <Wallet className="h-4 w-4 text-[#0f2557]" />
-          <span className="text-sm font-semibold text-[#0f2557]">Net Balance</span>
+          <div className="w-7 h-7 rounded-lg bg-[#0f2557]/5 flex items-center justify-center">
+            <Wallet className="h-3.5 w-3.5 text-[#0f2557]" />
+          </div>
+          <span className="text-sm font-bold text-[#0f2557]">Net Balance</span>
         </div>
-        <span className={`text-lg font-black ${profile.currentBalance >= 0 ? "text-[#0f2557]" : "text-destructive"}`}>
+        <span className={`text-xl font-black tracking-tight ${profile.currentBalance >= 0 ? "text-[#0f2557]" : "text-destructive"}`}>
           {formatCurrency(profile.currentBalance)}
         </span>
       </div>
@@ -417,7 +421,7 @@ export function MemberDetail() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{label}</p>
-                        <p className={`text-sm font-semibold text-[#0f2557] truncate ${mono ? "font-mono" : ""}`}>{value}</p>
+                        <p className={`text-sm text-[#0f2557] truncate ${mono ? "font-mono font-black tracking-wide" : "font-semibold"}`}>{value}</p>
                       </div>
                     </div>
                     {copy && (

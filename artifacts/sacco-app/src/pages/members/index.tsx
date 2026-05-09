@@ -5,9 +5,9 @@ import { Link } from "wouter";
 import { formatCurrency } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Search, UserPlus, Phone, ChevronRight, Hash } from "lucide-react";
+import { Search, UserPlus, Phone, ChevronRight, Hash, Plus } from "lucide-react";
 import { MemberAvatar } from "@/components/member-avatar";
 import { toast } from "sonner";
 
@@ -19,6 +19,11 @@ export function MembersList() {
   const { data: members, isLoading } = useListMembers(
     { search: search || undefined },
     { query: { queryKey: getListMembersQueryKey({ search: search || undefined }) } }
+  );
+
+  const { data: allMembers } = useListMembers(
+    {},
+    { query: { queryKey: getListMembersQueryKey({}) } }
   );
 
   const createMember = useCreateMember({
@@ -42,6 +47,9 @@ export function MembersList() {
     createMember.mutate({ data: newMember });
   };
 
+  const nextSeq = String((allMembers?.length ?? 0) + 1).padStart(5, "0");
+  const previewAccountNo = `BMMFS-${new Date().getFullYear()}-${nextSeq}`;
+
   return (
     <div className="bg-[#f4f6fb] min-h-screen">
       {/* Page hero */}
@@ -49,50 +57,20 @@ export function MembersList() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-white font-black text-xl tracking-tight">Members</h1>
-            <p className="text-white/50 text-xs mt-1">Bash M. Money And Financial Services Ltd</p>
+            <p className="text-white/50 text-xs mt-1">Bash M. Money Financial Services Ltd</p>
           </div>
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="bg-[#c9a144] hover:bg-[#b8902f] text-[#0f2557] font-bold rounded-xl gap-1.5 border-0">
-                <UserPlus className="h-4 w-4" />
-                Add
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="rounded-2xl">
-              <DialogHeader>
-                <DialogTitle className="text-[#0f2557]">Add New Member</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleCreate} className="space-y-4">
-                {[
-                  { id: "name", label: "Full Name", key: "name" as const, placeholder: "e.g. John Doe" },
-                  { id: "phone", label: "Phone Number", key: "phone" as const, placeholder: "+256 700 000000" },
-                  { id: "idNumber", label: "National ID Number", key: "idNumber" as const, placeholder: "e.g. CM90100012BVAW" },
-                ].map(({ id, label, key, placeholder }) => (
-                  <div key={id} className="space-y-1.5">
-                    <Label htmlFor={id} className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</Label>
-                    <Input
-                      id={id}
-                      placeholder={placeholder}
-                      value={newMember[key]}
-                      onChange={e => setNewMember({ ...newMember, [key]: e.target.value })}
-                      required
-                      className="rounded-xl border-[#0f2557]/15 focus-visible:ring-[#0f2557] h-11"
-                    />
-                  </div>
-                ))}
-                <DialogFooter className="gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)} className="rounded-xl">Cancel</Button>
-                  <Button type="submit" disabled={createMember.isPending} className="rounded-xl bg-[#0f2557] hover:bg-[#1a3570]">
-                    {createMember.isPending ? "Creating…" : "Create Member"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button
+            size="sm"
+            onClick={() => setIsAddOpen(true)}
+            className="bg-[#c9a144] hover:bg-[#b8902f] text-[#0f2557] font-bold rounded-xl gap-1.5 border-0"
+          >
+            <UserPlus className="h-4 w-4" />
+            New Member
+          </Button>
         </div>
       </div>
 
-      <div className="px-4 -mt-5 space-y-4 pb-8">
+      <div className="px-4 -mt-5 space-y-4 pb-28">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -113,8 +91,17 @@ export function MembersList() {
           </div>
         ) : members?.length === 0 ? (
           <div className="text-center py-14 text-muted-foreground border-2 border-dashed border-gray-200 rounded-2xl bg-white">
+            <UserPlus className="h-8 w-8 mx-auto mb-3 text-gray-300" />
             <p className="font-medium text-sm">No members found</p>
-            <p className="text-xs mt-1">Try a different search or add a new member</p>
+            <p className="text-xs mt-1">Try a different search or register a new member</p>
+            <Button
+              size="sm"
+              onClick={() => setIsAddOpen(true)}
+              className="mt-4 bg-[#0f2557] hover:bg-[#1a3570] text-white rounded-xl gap-1.5"
+            >
+              <Plus className="h-4 w-4" />
+              Register First Member
+            </Button>
           </div>
         ) : (
           <div className="space-y-2.5">
@@ -123,7 +110,6 @@ export function MembersList() {
               return (
                 <Link key={member.id} href={`/members/${member.id}`} className="block">
                   <div className="bg-white rounded-2xl px-4 py-3.5 shadow-sm border border-gray-100 flex items-center gap-3 hover:border-[#0f2557]/20 hover:shadow transition-all group">
-                    {/* Avatar */}
                     <MemberAvatar
                       name={member.name}
                       photoUrl={(member as any).profilePictureUrl}
@@ -134,7 +120,7 @@ export function MembersList() {
                       <p className="font-bold text-[#0f2557] text-sm group-hover:text-[#1a3570] truncate">{member.name}</p>
                       <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5 flex-wrap">
                         {(member as any).accountNumber && (
-                          <span className="flex items-center gap-0.5 font-mono text-[#0f2557]/50">
+                          <span className="flex items-center gap-0.5 font-mono font-semibold text-[#0f2557]/60">
                             <Hash className="h-2.5 w-2.5" />{(member as any).accountNumber}
                           </span>
                         )}
@@ -159,6 +145,64 @@ export function MembersList() {
           </div>
         )}
       </div>
+
+      {/* Floating Action Button */}
+      <button
+        onClick={() => setIsAddOpen(true)}
+        className="fixed bottom-24 right-5 z-50 w-14 h-14 rounded-full bg-[#c9a144] hover:bg-[#b8902f] text-[#0f2557] shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 border-4 border-white"
+        title="Register new member"
+        aria-label="Register new member"
+      >
+        <Plus className="h-7 w-7 stroke-[2.5px]" />
+      </button>
+
+      {/* Add Member Dialog */}
+      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <DialogContent className="rounded-2xl max-w-sm mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-[#0f2557] font-black">Register New Member</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreate} className="space-y-4">
+
+            {/* Account number preview */}
+            <div className="flex items-center gap-3 bg-[#0f2557]/5 border border-[#0f2557]/10 rounded-xl px-4 py-3">
+              <div className="w-8 h-8 rounded-lg bg-[#0f2557] flex items-center justify-center flex-shrink-0">
+                <Hash className="h-3.5 w-3.5 text-[#c9a144]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Account Number (Auto-assigned)</p>
+                <p className="font-mono font-black text-sm text-[#0f2557] tracking-wide">{previewAccountNo}</p>
+              </div>
+            </div>
+
+            {[
+              { id: "name",     label: "Full Name",         key: "name"     as const, placeholder: "e.g. John Doe", type: "text" },
+              { id: "phone",    label: "Phone Number",      key: "phone"    as const, placeholder: "+256 700 000000", type: "tel" },
+              { id: "idNumber", label: "National ID Number",key: "idNumber" as const, placeholder: "e.g. CM90100012BVAW", type: "text" },
+            ].map(({ id, label, key, placeholder, type }) => (
+              <div key={id} className="space-y-1.5">
+                <Label htmlFor={id} className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</Label>
+                <Input
+                  id={id}
+                  type={type}
+                  placeholder={placeholder}
+                  value={newMember[key]}
+                  onChange={e => setNewMember({ ...newMember, [key]: e.target.value })}
+                  required
+                  className="rounded-xl border-[#0f2557]/15 focus-visible:ring-[#0f2557] h-11"
+                />
+              </div>
+            ))}
+
+            <DialogFooter className="gap-2 pt-1">
+              <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)} className="rounded-xl flex-1">Cancel</Button>
+              <Button type="submit" disabled={createMember.isPending} className="rounded-xl flex-1 bg-[#0f2557] hover:bg-[#1a3570] font-bold">
+                {createMember.isPending ? "Creating…" : "Register Member"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

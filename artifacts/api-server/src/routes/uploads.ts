@@ -8,7 +8,7 @@ import { requireAdmin } from "../middlewares/auth";
 import fs from "fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadsRoot = path.resolve(__dirname, "..", "..", "uploads");
+const uploadsRoot = path.resolve(__dirname, "..", "uploads");
 
 function diskStorage(subfolder: string) {
   return multer.diskStorage({
