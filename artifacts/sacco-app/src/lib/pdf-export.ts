@@ -110,6 +110,46 @@ async function loadCircularImage(url: string, diameter: number): Promise<string 
   }
 }
 
+/** Render the BMM circular logo SVG to a PNG data URL for use in jsPDF. */
+async function renderLogoDataUrl(size: number): Promise<string | null> {
+  try {
+    const svg = `<svg width="${size}" height="${size}" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="lg1" x1="15%" y1="0%" x2="85%" y2="100%">
+    <stop offset="0%" stop-color="#f9eaaa"/><stop offset="25%" stop-color="#d4ae56"/>
+    <stop offset="50%" stop-color="#f5d97a"/><stop offset="75%" stop-color="#b8903a"/>
+    <stop offset="100%" stop-color="#e0c060"/>
+  </linearGradient>
+  <radialGradient id="ln" cx="42%" cy="32%" r="70%">
+    <stop offset="0%" stop-color="#1e3f7a"/><stop offset="100%" stop-color="#0b1d4e"/>
+  </radialGradient>
+</defs>
+<circle cx="100" cy="100" r="99" fill="url(#lg1)"/>
+<circle cx="100" cy="100" r="91" fill="#0c1d4e"/>
+<circle cx="100" cy="100" r="88" fill="url(#lg1)"/>
+<circle cx="100" cy="100" r="83" fill="url(#ln)"/>
+<circle cx="100" cy="100" r="73" fill="none" stroke="#c9a144" stroke-width="0.7" opacity="0.45"/>
+<text x="101" y="117" text-anchor="middle" font-family="Georgia,serif" font-size="52" font-weight="bold" fill="#060f2a" opacity="0.4" letter-spacing="-1">BMM</text>
+<text x="100" y="116" text-anchor="middle" font-family="Georgia,serif" font-size="52" font-weight="bold" fill="#c9a144" letter-spacing="-1">BMM</text>
+</svg>`;
+    const blob = new Blob([svg], { type: "image/svg+xml" });
+    const url  = URL.createObjectURL(blob);
+    const img  = new Image();
+    await new Promise<void>((resolve, reject) => {
+      img.onload  = () => resolve();
+      img.onerror = () => reject(new Error("logo render failed"));
+      img.src = url;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = size; canvas.height = size;
+    canvas.getContext("2d")!.drawImage(img, 0, 0, size, size);
+    URL.revokeObjectURL(url);
+    return canvas.toDataURL("image/png");
+  } catch {
+    return null;
+  }
+}
+
 export async function exportMemberStatementPDF(
   profile: MemberProfile,
   ledger: MemberLedger,
@@ -119,11 +159,12 @@ export async function exportMemberStatementPDF(
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 14;
 
-  // ── Load member photo (async, before drawing) ───────────────────────────────
+  // ── Load assets (parallel) ────────────────────────────────────────────────
   let photoDataUrl: string | null = null;
   if (profile.profilePictureUrl) {
     photoDataUrl = await loadCircularImage(profile.profilePictureUrl, 200);
   }
+  const logoDataUrl = await renderLogoDataUrl(300);
 
   // ── Compute statement period ─────────────────────────────────────────────────
   const dates    = ledger.entries.map((e) => new Date(e.createdAt).getTime());
@@ -167,34 +208,35 @@ export async function exportMemberStatementPDF(
     doc.text(initials, photoX + photoSize / 2, photoY + photoSize / 2 + 3.5, { align: "center" });
   }
 
-  // ── Left text column — constrained to avoid photo ────────────────────────
-  // Max text width = space up to photo minus a gap
-  const textMaxW  = photoX - margin - 6;       // leave 6mm gap before photo
-  const badgeX    = margin;
-  const badgeY    = photoPad + 1;              // vertically centred near top
+  // ── Left column: circular logo + company name ────────────────────────────
+  const logoMm   = photoSize;                     // same height as member photo
+  const textX    = margin + logoMm + 4;           // company name starts after logo
+  const textMaxW = photoX - textX - 6;            // constrained to photo gap
 
-  // BMM badge
-  doc.setFillColor(...GOLD);
-  doc.roundedRect(badgeX, badgeY, 14, 9, 1.5, 1.5, "F");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7);
-  doc.setTextColor(...NAVY);
-  doc.text("BMM", badgeX + 7, badgeY + 6, { align: "center" });
+  // Circular BMM logo
+  if (logoDataUrl) {
+    doc.addImage(logoDataUrl, "PNG", margin, photoPad, logoMm, logoMm);
+  } else {
+    doc.setFillColor(...GOLD);
+    doc.circle(margin + logoMm / 2, photoPad + logoMm / 2, logoMm / 2, "F");
+    doc.setFillColor(...NAVY);
+    doc.circle(margin + logoMm / 2, photoPad + logoMm / 2, logoMm / 2 - 2, "F");
+    doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(...GOLD);
+    doc.text("BMM", margin + logoMm / 2, photoPad + logoMm / 2 + 3.5, { align: "center" });
+  }
 
-  // Company name — clipped to text column
-  const textX = badgeX + 17;
+  // Company name — vertically centred with logo
+  const textCY = photoPad + logoMm / 2;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.setTextColor(...WHITE);
-  // Split long name if needed and draw only within textMaxW
-  const companyName = "BASH M. MONEY FINANCIAL SERVICES LTD";
-  doc.text(companyName, textX, badgeY + 5.5, { maxWidth: textMaxW });
+  doc.text("BASH M. MONEY FINANCIAL SERVICES LTD", textX, textCY - 2, { maxWidth: textMaxW });
 
   // Subtitle — "Member Account Statement"
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(220, 210, 170);
-  doc.text("Member Account Statement", textX, badgeY + 13, { maxWidth: textMaxW });
+  doc.text("Member Account Statement", textX, textCY + 5, { maxWidth: textMaxW });
 
   let y = headerH + 4;
 
@@ -508,11 +550,12 @@ export async function exportReportPDF(
   const pageW  = doc.internal.pageSize.getWidth();
   const margin = 14;
 
-  // Load admin photo
+  // Load assets
   let adminPhotoDataUrl: string | null = null;
   if (adminPhotoUrl) {
     adminPhotoDataUrl = await loadCircularImage(adminPhotoUrl, 200);
   }
+  const logoDataUrl = await renderLogoDataUrl(300);
 
   // ── HEADER ─────────────────────────────────────────────────────────────────
   const photoSize = 22;
@@ -561,29 +604,34 @@ export async function exportReportPDF(
   doc.setTextColor(220, 210, 170);
   doc.text(empIdLabel, nameRightEdge, nameCenterY + 4.5, { align: "right", maxWidth: 48 });
 
-  // ── Left column: BMM badge + company name ────────────────────────────────
-  // Max width = up to the admin name block (leave breathing room)
-  const textMaxW = nameRightEdge - 48 - margin - 4;  // up to start of name column
-  const badgeX   = margin;
-  const badgeY   = photoPad + 1;
+  // ── Left column: circular logo + company name ────────────────────────────
+  const logoMm   = photoSize;                          // same height as admin photo
+  const textX    = margin + logoMm + 4;
+  const textMaxW = nameRightEdge - 48 - textX - 4;    // up to start of name column
 
-  doc.setFillColor(...GOLD);
-  doc.roundedRect(badgeX, badgeY, 14, 9, 1.5, 1.5, "F");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7);
-  doc.setTextColor(...NAVY);
-  doc.text("BMM", badgeX + 7, badgeY + 6, { align: "center" });
+  // Circular BMM logo
+  if (logoDataUrl) {
+    doc.addImage(logoDataUrl, "PNG", margin, photoPad, logoMm, logoMm);
+  } else {
+    doc.setFillColor(...GOLD);
+    doc.circle(margin + logoMm / 2, photoPad + logoMm / 2, logoMm / 2, "F");
+    doc.setFillColor(...NAVY);
+    doc.circle(margin + logoMm / 2, photoPad + logoMm / 2, logoMm / 2 - 2, "F");
+    doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(...GOLD);
+    doc.text("BMM", margin + logoMm / 2, photoPad + logoMm / 2 + 3, { align: "center" });
+  }
 
-  const textX = badgeX + 17;
+  // Company name — vertically centred with logo
+  const textCY = photoPad + logoMm / 2;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.setTextColor(...WHITE);
-  doc.text("BASH M. MONEY FINANCIAL SERVICES LTD", textX, badgeY + 5.5, { maxWidth: textMaxW });
+  doc.text("BASH M. MONEY FINANCIAL SERVICES LTD", textX, textCY - 2, { maxWidth: textMaxW });
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(220, 210, 170);
-  doc.text("Financial Transaction Report", textX, badgeY + 13, { maxWidth: textMaxW });
+  doc.text("Financial Transaction Report", textX, textCY + 5, { maxWidth: textMaxW });
 
   let y = headerH + 6;
 

@@ -133,12 +133,24 @@ export function Login() {
   return (
     <div className="min-h-[100dvh] flex flex-col bg-[#f4f6fb]">
       {/* Navy top banner */}
-      <div className="bg-[#0f2557] px-4 pt-12 pb-16 flex flex-col items-center text-center">
-        <BmmLogo size="lg" variant="badge" />
-        <h1 className="text-white font-black text-lg tracking-widest mt-4 leading-snug uppercase">
-          Bash M. Money Financial Services Ltd
-        </h1>
-        <p className="text-white/50 text-xs mt-1 uppercase tracking-widest font-medium">Secure Portal</p>
+      <div className="bg-[#0f2557] px-4 pt-8 pb-16 flex flex-col items-center text-center relative overflow-hidden">
+        {/* Gold radial glow behind logo */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            width: 220,
+            height: 220,
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -60%)",
+            background: "radial-gradient(ellipse, rgba(201,161,68,0.22) 0%, transparent 68%)",
+            filter: "blur(18px)",
+          }}
+        />
+        <div className="relative z-10 drop-shadow-2xl">
+          <BmmLogo size="xl" variant="badge" />
+        </div>
+        <p className="text-white/50 text-xs mt-4 uppercase tracking-widest font-medium relative z-10">Secure Portal</p>
       </div>
 
       <div className="flex-1 px-4 -mt-8 flex flex-col max-w-sm mx-auto w-full">

@@ -1,3 +1,25 @@
-<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="180" height="180" rx="36" fill="#FF3C00"/>
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="fg" x1="15%" y1="0%" x2="85%" y2="100%">
+      <stop offset="0%"   stop-color="#f9eaaa"/>
+      <stop offset="30%"  stop-color="#d4ae56"/>
+      <stop offset="55%"  stop-color="#f5d97a"/>
+      <stop offset="80%"  stop-color="#b8903a"/>
+      <stop offset="100%" stop-color="#e0c060"/>
+    </linearGradient>
+    <radialGradient id="fn" cx="42%" cy="35%" r="70%">
+      <stop offset="0%"   stop-color="#1e3f7a"/>
+      <stop offset="100%" stop-color="#0b1d4e"/>
+    </radialGradient>
+  </defs>
+  <circle cx="50" cy="50" r="49"   fill="url(#fg)"/>
+  <circle cx="50" cy="50" r="44.5" fill="#0c1d4e"/>
+  <circle cx="50" cy="50" r="43"   fill="url(#fg)"/>
+  <circle cx="50" cy="50" r="40"   fill="url(#fn)"/>
+  <text x="51" y="59" text-anchor="middle"
+    font-family="Georgia, serif" font-size="26" font-weight="bold"
+    fill="#060f2a" opacity="0.4" letter-spacing="-0.5">BMM</text>
+  <text x="50" y="58" text-anchor="middle"
+    font-family="Georgia, serif" font-size="26" font-weight="bold"
+    fill="#c9a144" letter-spacing="-0.5">BMM</text>
 </svg>
