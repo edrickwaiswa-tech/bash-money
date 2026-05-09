@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Search, UserPlus, Phone, ChevronRight, Hash } from "lucide-react";
+import { MemberAvatar } from "@/components/member-avatar";
 import { toast } from "sonner";
 
 export function MembersList() {
@@ -118,19 +119,16 @@ export function MembersList() {
         ) : (
           <div className="space-y-2.5">
             {members?.map(member => {
-              const initials = member.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase();
               const balance = (member as any).currentBalance ?? 0;
               return (
                 <Link key={member.id} href={`/members/${member.id}`} className="block">
                   <div className="bg-white rounded-2xl px-4 py-3.5 shadow-sm border border-gray-100 flex items-center gap-3 hover:border-[#0f2557]/20 hover:shadow transition-all group">
                     {/* Avatar */}
-                    <div className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center bg-[#0f2557]/5 border-2 border-[#c9a144]/30 overflow-hidden">
-                      {(member as any).profilePictureUrl ? (
-                        <img src={(member as any).profilePictureUrl} alt={member.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-[#0f2557] font-black text-sm">{initials}</span>
-                      )}
-                    </div>
+                    <MemberAvatar
+                      name={member.name}
+                      photoUrl={(member as any).profilePictureUrl}
+                      size="md"
+                    />
 
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-[#0f2557] text-sm group-hover:text-[#1a3570] truncate">{member.name}</p>

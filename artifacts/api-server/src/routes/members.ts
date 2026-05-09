@@ -47,11 +47,11 @@ router.post("/members", requireAdmin, async (req, res) => {
     const body = CreateMemberBody.parse(req.body);
     const joinDate = body.joinDate ?? new Date().toISOString().split("T")[0];
 
-    // Auto-generate account number: NJF-YYYY-NNNNN
+    // Auto-generate account number: BMMFS-YYYY-NNNNN
     const year = new Date().getFullYear();
     const countRow = await db.select({ id: membersTable.id }).from(membersTable);
     const seq = String(countRow.length + 1).padStart(5, "0");
-    const accountNumber = `BM-${year}-${seq}`;
+    const accountNumber = `BMMFS-${year}-${seq}`;
 
     const [member] = await db
       .insert(membersTable)

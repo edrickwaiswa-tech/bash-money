@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, Link } from "wouter";
+import { MemberAvatar } from "@/components/member-avatar";
 import {
   useGetMember, getGetMemberQueryKey,
   useGetMemberLedger, getGetMemberLedgerQueryKey,
@@ -207,7 +208,8 @@ export function MemberDetail() {
 
   const effectivePic = picPreview ?? (profile as any).profilePictureUrl ?? null;
   const effectiveSig = sigPreview ?? (profile as any).signatureUrl ?? null;
-  const initials = profile.name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+  const initials = profile.name.trim().split(/\s+/).map((n) => n[0]?.toUpperCase() ?? "").slice(0, 2).join("");
+  const [heroImgError, setHeroImgError] = useState(false);
 
   return (
     <div className="bg-[#f4f6fb] min-h-screen">
@@ -238,7 +240,7 @@ export function MemberDetail() {
 
         {/* Profile Row */}
         <div className="flex items-end gap-4">
-          {/* Avatar */}
+          {/* Hero Avatar — gold ring, dark bg, gold initials fallback */}
           <div className="relative flex-shrink-0">
             <button
               onClick={() => picInputRef.current?.click()}
@@ -247,8 +249,13 @@ export function MemberDetail() {
               title="Change profile photo"
             >
               <div className="w-20 h-20 rounded-full overflow-hidden border-[3px] border-[#c9a144] bg-[#1a3570] flex items-center justify-center shadow-xl">
-                {effectivePic ? (
-                  <img src={effectivePic} alt={profile.name} className="w-full h-full object-cover" />
+                {effectivePic && !heroImgError ? (
+                  <img
+                    src={effectivePic}
+                    alt={profile.name}
+                    className="w-full h-full object-cover"
+                    onError={() => setHeroImgError(true)}
+                  />
                 ) : (
                   <span className="text-[#c9a144] font-black text-2xl tracking-tight select-none">{initials}</span>
                 )}
@@ -355,20 +362,18 @@ export function MemberDetail() {
               </div>
 
               <div className="px-5 py-5 flex items-center gap-5">
-                {/* Large avatar with golden ring */}
+                {/* Profile tab avatar — uses MemberAvatar for automatic onError fallback */}
                 <button
                   onClick={() => picInputRef.current?.click()}
                   disabled={uploadingPic}
-                  className="group relative flex-shrink-0"
+                  className="group relative flex-shrink-0 transition-transform hover:scale-105"
                   title="Change profile photo"
                 >
-                  <div className="w-24 h-24 rounded-full overflow-hidden border-[3px] border-[#c9a144] bg-[#f4f6fb] flex items-center justify-center shadow-md transition-transform group-hover:scale-105">
-                    {effectivePic ? (
-                      <img src={effectivePic} alt={profile.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-[#0f2557] font-black text-3xl select-none">{initials}</span>
-                    )}
-                  </div>
+                  <MemberAvatar
+                    name={profile.name}
+                    photoUrl={effectivePic}
+                    size="xl"
+                  />
                   <div className="absolute -bottom-1 -right-1 bg-[#c9a144] text-[#0f2557] rounded-full p-2 shadow-lg group-hover:scale-110 transition-transform border-2 border-white">
                     <Camera className="w-3.5 h-3.5" />
                   </div>

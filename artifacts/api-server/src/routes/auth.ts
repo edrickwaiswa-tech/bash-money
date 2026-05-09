@@ -98,9 +98,9 @@ router.post("/auth/forgot-pin/request-code", async (req, res): Promise<void> => 
   pendingOtps.set(phone as string, { code, expiresAt });
 
   // ── Simulated SMS (development) ──
-  logger.info({ phone, code }, "🔐 [SIMULATED SMS] NJF Ledger PIN Reset Code");
+  logger.info({ phone, code }, "🔐 [SIMULATED SMS] Bash M. Money Financial Services Ltd — PIN Reset Code");
   console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  console.log(`  📱 NJF Ledger — Simulated SMS`);
+  console.log(`  📱 Bash M. Money Financial Services Ltd — PIN Reset`);
   console.log(`  To: ${phone}`);
   console.log(`  Code: ${code}`);
   console.log(`  Expires in: 10 minutes`);
@@ -221,9 +221,9 @@ router.post("/auth/member/request-otp", async (req, res): Promise<void> => {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   memberOtps.set(phone as string, { code, expiresAt: Date.now() + 10 * 60 * 1000, memberId: member.id });
 
-  logger.info({ phone, code }, "📱 [SIMULATED SMS] NJF Ledger Member Login Code");
+  logger.info({ phone, code }, "📱 [SIMULATED SMS] Bash M. Money Financial Services Ltd — Member Login Code");
   console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  console.log(`  📱 NJF Ledger — Member Login`);
+  console.log(`  📱 Bash M. Money Financial Services Ltd — Member Login`);
   console.log(`  To: ${phone}`);
   console.log(`  Code: ${code}`);
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
