@@ -448,12 +448,6 @@ export async function exportMemberStatementPDF(
     doc.setPage(i);
     const ph = doc.internal.pageSize.getHeight();
 
-    // ── Watermark — faint large "BMM" centered on every page ─────────────────
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(110);
-    doc.setTextColor(232, 235, 244);   // extremely light navy tint — nearly invisible
-    doc.text("BMM", pageW / 2, ph / 2 + 15, { align: "center", angle: 30 });
-
     // ── Footer area ───────────────────────────────────────────────────────────
     // Gold divider line
     doc.setDrawColor(...GOLD);
