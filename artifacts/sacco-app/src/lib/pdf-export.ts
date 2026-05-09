@@ -246,13 +246,17 @@ export async function exportMemberStatementPDF(
   doc.setTextColor(...DARK);
   doc.text(profile.phone, col2 + 14, r2y);
 
-  // Row 3 — Member since & ID
+  // Row 3 — Account Status (replaces "Member Since") & ID
   const r3y = y + 29;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
   doc.setTextColor(...MUTED);
-  doc.text("Member Since:", col1, r3y);
-  doc.setTextColor(...DARK);
-  doc.text(formatDateOnly(profile.joinDate), col1 + 27, r3y);
+  doc.text("Account Status:", col1, r3y);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...GREEN);
+  doc.text("Active", col1 + 30, r3y);
 
+  doc.setFont("helvetica", "normal");
   doc.setTextColor(...MUTED);
   doc.text("ID No.:", col2, r3y);
   doc.setTextColor(...DARK);
@@ -390,9 +394,31 @@ export async function exportMemberStatementPDF(
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
+  //  AUTHORIZED SIGNATURE LINE
+  // ═══════════════════════════════════════════════════════════════════════════
+  const sigY = finalTotalsY + totalsH + 8;
+
+  // Right-aligned signature block
+  const sigLineX1 = pageW / 2 + 10;
+  const sigLineX2 = pageW - margin;
+  doc.setDrawColor(...NAVY);
+  doc.setLineWidth(0.4);
+  doc.line(sigLineX1, sigY, sigLineX2, sigY);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(...NAVY);
+  doc.text("Authorized Signature", (sigLineX1 + sigLineX2) / 2, sigY + 4, { align: "center" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.5);
+  doc.setTextColor(...MUTED);
+  doc.text("Bash M. Money And Financial Services Ltd", (sigLineX1 + sigLineX2) / 2, sigY + 8, { align: "center" });
+
+  // ═══════════════════════════════════════════════════════════════════════════
   //  OFFICIAL STATEMENT NOTICE
   // ═══════════════════════════════════════════════════════════════════════════
-  const noticeY = finalTotalsY + totalsH + 6;
+  const noticeY = sigY + 13;
   const noticeH = 9;
   doc.setFillColor(...GOLD_LIGHT);
   doc.roundedRect(margin, noticeY, pageW - margin * 2, noticeH, 2, 2, "F");
@@ -422,34 +448,44 @@ export async function exportMemberStatementPDF(
     doc.setPage(i);
     const ph = doc.internal.pageSize.getHeight();
 
+    // ── Watermark — faint large "BMM" centered on every page ─────────────────
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(110);
+    doc.setTextColor(232, 235, 244);   // extremely light navy tint — nearly invisible
+    doc.text("BMM", pageW / 2, ph / 2 + 15, { align: "center", angle: 30 });
+
+    // ── Footer area ───────────────────────────────────────────────────────────
     // Gold divider line
     doc.setDrawColor(...GOLD);
     doc.setLineWidth(0.5);
-    doc.line(margin, ph - 16, pageW - margin, ph - 16);
+    doc.line(margin, ph - 18, pageW - margin, ph - 18);
 
-    // Left: company name (bold navy)
+    // Row 1 — Left: company name | Center: timestamp | Right: page number
     doc.setFont("helvetica", "bold");
     doc.setFontSize(6.5);
     doc.setTextColor(...NAVY);
-    doc.text("Bash M. Money And Financial Services Ltd", margin, ph - 11);
+    doc.text("Bash M. Money And Financial Services Ltd", margin, ph - 13);
 
-    // Center: generated timestamp (italic gray) — banking standard
     doc.setFont("helvetica", "italic");
     doc.setFontSize(6.5);
     doc.setTextColor(...MUTED);
-    doc.text(genDate, pageW / 2, ph - 11, { align: "center" });
+    doc.text(genDate, pageW / 2, ph - 13, { align: "center" });
 
-    // Right: page number
     doc.setFont("helvetica", "normal");
     doc.setFontSize(6.5);
     doc.setTextColor(...MUTED);
-    doc.text(`Page ${i} of ${totalPages}`, pageW - margin, ph - 11, { align: "right" });
+    doc.text(`Page ${i} of ${totalPages}`, pageW - margin, ph - 13, { align: "right" });
 
-    // Second line: confidential notice (left, muted)
+    // Row 2 — Left: confidential | Right: support contact
     doc.setFont("helvetica", "normal");
     doc.setFontSize(6);
     doc.setTextColor(...MUTED);
-    doc.text("Confidential — For the named member only. Do not distribute.", margin, ph - 6);
+    doc.text("Confidential — For the named member only. Do not distribute.", margin, ph - 8);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6);
+    doc.setTextColor(...MUTED);
+    doc.text("Support: Tel: +256 754 143594 / +256 782 547022", pageW - margin, ph - 8, { align: "right" });
   }
 
   // ── Save ─────────────────────────────────────────────────────────────────────
