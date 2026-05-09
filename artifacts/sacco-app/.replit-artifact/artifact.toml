@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "SACCO Financial App"
+title = "Bash M. Money And Financial  Services Ltd"
 version = "1.0.0"
 id = "artifacts/sacco-app"
 router = "path"

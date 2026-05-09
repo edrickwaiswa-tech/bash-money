@@ -110,41 +110,26 @@ async function loadCircularImage(url: string, diameter: number): Promise<string 
   }
 }
 
-/** Render the BMM circular logo SVG to a PNG data URL for use in jsPDF. */
+/**
+ * Load the official BMMFS logo at high resolution for use in jsPDF.
+ * Renders the full-colour JPEG onto a white canvas so it prints crisply.
+ */
 async function renderLogoDataUrl(size: number): Promise<string | null> {
   try {
-    const svg = `<svg width="${size}" height="${size}" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-<defs>
-  <linearGradient id="lg1" x1="15%" y1="0%" x2="85%" y2="100%">
-    <stop offset="0%" stop-color="#f9eaaa"/><stop offset="25%" stop-color="#d4ae56"/>
-    <stop offset="50%" stop-color="#f5d97a"/><stop offset="75%" stop-color="#b8903a"/>
-    <stop offset="100%" stop-color="#e0c060"/>
-  </linearGradient>
-  <radialGradient id="ln" cx="42%" cy="32%" r="70%">
-    <stop offset="0%" stop-color="#1e3f7a"/><stop offset="100%" stop-color="#0b1d4e"/>
-  </radialGradient>
-</defs>
-<circle cx="100" cy="100" r="99" fill="url(#lg1)"/>
-<circle cx="100" cy="100" r="91" fill="#0c1d4e"/>
-<circle cx="100" cy="100" r="88" fill="url(#lg1)"/>
-<circle cx="100" cy="100" r="83" fill="url(#ln)"/>
-<circle cx="100" cy="100" r="73" fill="none" stroke="#c9a144" stroke-width="0.7" opacity="0.45"/>
-<text x="101" y="117" text-anchor="middle" font-family="Georgia,serif" font-size="52" font-weight="bold" fill="#060f2a" opacity="0.4" letter-spacing="-1">BMM</text>
-<text x="100" y="116" text-anchor="middle" font-family="Georgia,serif" font-size="52" font-weight="bold" fill="#c9a144" letter-spacing="-1">BMM</text>
-</svg>`;
-    const blob = new Blob([svg], { type: "image/svg+xml" });
-    const url  = URL.createObjectURL(blob);
-    const img  = new Image();
+    const img = new Image();
     await new Promise<void>((resolve, reject) => {
       img.onload  = () => resolve();
-      img.onerror = () => reject(new Error("logo render failed"));
-      img.src = url;
+      img.onerror = () => reject(new Error("logo load failed"));
+      img.src = "/bmm-logo-original.jpeg";
     });
     const canvas = document.createElement("canvas");
-    canvas.width = size; canvas.height = size;
-    canvas.getContext("2d")!.drawImage(img, 0, 0, size, size);
-    URL.revokeObjectURL(url);
-    return canvas.toDataURL("image/png");
+    canvas.width  = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, size, size);
+    ctx.drawImage(img, 0, 0, size, size);
+    return canvas.toDataURL("image/jpeg", 0.95);
   } catch {
     return null;
   }
@@ -164,7 +149,7 @@ export async function exportMemberStatementPDF(
   if (profile.profilePictureUrl) {
     photoDataUrl = await loadCircularImage(profile.profilePictureUrl, 200);
   }
-  const logoDataUrl = await renderLogoDataUrl(300);
+  const logoDataUrl = await renderLogoDataUrl(500);
 
   // ── Compute statement period ─────────────────────────────────────────────────
   const dates    = ledger.entries.map((e) => new Date(e.createdAt).getTime());
@@ -213,9 +198,11 @@ export async function exportMemberStatementPDF(
   const textX    = margin + logoMm + 4;           // company name starts after logo
   const textMaxW = photoX - textX - 6;            // constrained to photo gap
 
-  // Circular BMM logo
+  // Official BMMFS logo — white card behind it for full-colour contrast on navy
   if (logoDataUrl) {
-    doc.addImage(logoDataUrl, "PNG", margin, photoPad, logoMm, logoMm);
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin - 0.8, photoPad - 0.8, logoMm + 1.6, logoMm + 1.6, 2, 2, "F");
+    doc.addImage(logoDataUrl, "JPEG", margin, photoPad, logoMm, logoMm);
   } else {
     doc.setFillColor(...GOLD);
     doc.circle(margin + logoMm / 2, photoPad + logoMm / 2, logoMm / 2, "F");
@@ -555,7 +542,7 @@ export async function exportReportPDF(
   if (adminPhotoUrl) {
     adminPhotoDataUrl = await loadCircularImage(adminPhotoUrl, 200);
   }
-  const logoDataUrl = await renderLogoDataUrl(300);
+  const logoDataUrl = await renderLogoDataUrl(500);
 
   // ── HEADER ─────────────────────────────────────────────────────────────────
   const photoSize = 22;
@@ -609,9 +596,11 @@ export async function exportReportPDF(
   const textX    = margin + logoMm + 4;
   const textMaxW = nameRightEdge - 48 - textX - 4;    // up to start of name column
 
-  // Circular BMM logo
+  // Official BMMFS logo — white card behind it for full-colour contrast on navy
   if (logoDataUrl) {
-    doc.addImage(logoDataUrl, "PNG", margin, photoPad, logoMm, logoMm);
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin - 0.8, photoPad - 0.8, logoMm + 1.6, logoMm + 1.6, 2, 2, "F");
+    doc.addImage(logoDataUrl, "JPEG", margin, photoPad, logoMm, logoMm);
   } else {
     doc.setFillColor(...GOLD);
     doc.circle(margin + logoMm / 2, photoPad + logoMm / 2, logoMm / 2, "F");
