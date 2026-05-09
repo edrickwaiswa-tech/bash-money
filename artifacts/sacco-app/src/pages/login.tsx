@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PinInput } from "@/components/pin-input";
 import { BmmLogo } from "@/components/bmm-logo";
-import { ShieldCheck, Lock, Phone, Hash, ArrowLeft, KeyRound } from "lucide-react";
+import { ShieldCheck, Lock, Phone, Hash, ArrowLeft, KeyRound, Shield, User } from "lucide-react";
 import { toast } from "sonner";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -156,21 +156,62 @@ export function Login() {
       <div className="flex-1 px-4 -mt-8 flex flex-col max-w-sm mx-auto w-full">
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
 
-          {/* Admin / Member tab toggle */}
-          <div className="flex border-b border-gray-100">
-            {(["admin", "member"] as Tab[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => { setTab(t); resetMemberState(); setAdminPin(""); setAdminError(""); }}
-                className={`flex-1 py-3.5 text-sm font-bold tracking-wide transition-all ${
-                  tab === t
-                    ? "text-[#0f2557] border-b-2 border-[#c9a144] bg-[#0f2557]/3"
-                    : "text-muted-foreground hover:text-[#0f2557]"
-                }`}
-              >
-                {t === "admin" ? "Admin Login" : "Member Login"}
-              </button>
-            ))}
+          {/* ── Portal tab selector ── */}
+          <div className="flex border-b border-gray-100 bg-gray-50/70">
+
+            {/* Admin Portal tab */}
+            <button
+              onClick={() => { setTab("admin"); resetMemberState(); setAdminPin(""); setAdminError(""); }}
+              className={`flex-1 flex flex-col items-center gap-1.5 pt-4 pb-3.5 relative transition-colors ${
+                tab === "admin" ? "bg-white" : "hover:bg-gray-50"
+              }`}
+            >
+              <div className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
+                tab === "admin" ? "bg-[#0f2557]/8" : "bg-gray-100/80"
+              }`}>
+                <Shield className={`w-[18px] h-[18px] transition-colors ${
+                  tab === "admin" ? "text-[#c9a144]" : "text-gray-400"
+                }`} />
+              </div>
+              <span className={`text-[11px] font-black tracking-widest uppercase transition-colors ${
+                tab === "admin" ? "text-[#0f2557]" : "text-gray-400"
+              }`}>
+                Admin Portal
+              </span>
+              {/* Active gold indicator bar */}
+              {tab === "admin" && (
+                <span className="absolute bottom-0 left-3 right-3 h-[3px] rounded-t-full bg-[#c9a144]" />
+              )}
+            </button>
+
+            {/* Vertical separator */}
+            <div className="w-px bg-gray-100 my-4" />
+
+            {/* Member Portal tab */}
+            <button
+              onClick={() => { setTab("member"); resetMemberState(); setAdminPin(""); setAdminError(""); }}
+              className={`flex-1 flex flex-col items-center gap-1.5 pt-4 pb-3.5 relative transition-colors ${
+                tab === "member" ? "bg-white" : "hover:bg-gray-50"
+              }`}
+            >
+              <div className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
+                tab === "member" ? "bg-[#0f2557]/8" : "bg-gray-100/80"
+              }`}>
+                <User className={`w-[18px] h-[18px] transition-colors ${
+                  tab === "member" ? "text-[#c9a144]" : "text-gray-400"
+                }`} />
+              </div>
+              <span className={`text-[11px] font-black tracking-widest uppercase transition-colors ${
+                tab === "member" ? "text-[#0f2557]" : "text-gray-400"
+              }`}>
+                Member Portal
+              </span>
+              {/* Active gold indicator bar */}
+              {tab === "member" && (
+                <span className="absolute bottom-0 left-3 right-3 h-[3px] rounded-t-full bg-[#c9a144]" />
+              )}
+            </button>
+
           </div>
 
           {/* ── ADMIN TAB ── */}
