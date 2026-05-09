@@ -103,9 +103,9 @@ export function ForgotPin() {
         {/* Logo */}
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="bg-primary text-white p-3 rounded-2xl shadow-lg">
-            <span className="text-white font-black text-xl tracking-tight">NJF</span>
+            <span className="text-white font-black text-xl tracking-tight">BM</span>
           </div>
-          <h1 className="text-2xl font-black tracking-tight">NJF Ledger</h1>
+          <h1 className="text-2xl font-black tracking-tight">Bash M. Money And Financial Services Ltd</h1>
         </div>
 
         <Card className="shadow-md border-0">
@@ -118,7 +118,7 @@ export function ForgotPin() {
                   <span className="font-semibold text-base">Forgot PIN</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Enter your registered phone number. NJF Ledger will send a verification code.
+                  Enter your registered phone number. Bash M. Money will send a verification code.
                 </p>
               </CardHeader>
               <CardContent className="px-6 pt-2 pb-6">
@@ -231,7 +231,7 @@ export function ForgotPin() {
             <>
               <CardHeader className="pb-2 pt-6 px-6 text-center">
                 <span className="font-semibold text-base">Create new PIN</span>
-                <p className="text-xs text-muted-foreground mt-1">Choose a 4-digit PIN for NJF Ledger</p>
+                <p className="text-xs text-muted-foreground mt-1">Choose a 4-digit PIN for Bash M. Money</p>
               </CardHeader>
               <CardContent className="px-6 pt-3 pb-6">
                 <form onSubmit={handleResetPin} className="space-y-5">
@@ -284,7 +284,7 @@ export function ForgotPin() {
               </div>
               <h2 className="text-lg font-bold">PIN updated!</h2>
               <p className="text-sm text-muted-foreground">
-                Your NJF Ledger PIN has been changed successfully. You can now sign in with your new PIN.
+                Your Bash M. Money PIN has been changed successfully. You can now sign in with your new PIN.
               </p>
               <Button className="w-full" onClick={() => navigate("/login")}>
                 Go to sign in

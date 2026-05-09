@@ -51,7 +51,7 @@ router.post("/members", requireAdmin, async (req, res) => {
     const year = new Date().getFullYear();
     const countRow = await db.select({ id: membersTable.id }).from(membersTable);
     const seq = String(countRow.length + 1).padStart(5, "0");
-    const accountNumber = `NJF-${year}-${seq}`;
+    const accountNumber = `BM-${year}-${seq}`;
 
     const [member] = await db
       .insert(membersTable)

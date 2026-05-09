@@ -33,9 +33,9 @@ export function Layout({ children }: LayoutProps) {
         <div className="flex items-center justify-between px-4 h-16 max-w-lg mx-auto w-full">
           <div className="flex items-center gap-2">
             <div className="bg-primary text-white px-2.5 py-1.5 rounded-lg">
-              <span className="font-black text-sm tracking-tight">NJF</span>
+              <span className="font-black text-sm tracking-tight">BM</span>
             </div>
-            <span className="font-black text-lg tracking-tight">NJF Ledger</span>
+            <span className="font-black text-lg tracking-tight">Bash M. Money</span>
           </div>
 
           {user && (

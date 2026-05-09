@@ -77,10 +77,10 @@ export function MemberLogin() {
 
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="bg-primary text-white p-3 rounded-2xl shadow-lg">
-            <span className="text-white font-black text-xl tracking-tight">NJF</span>
+            <span className="text-white font-black text-xl tracking-tight">BM</span>
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight">NJF Ledger</h1>
+            <h1 className="text-2xl font-black tracking-tight">Bash M. Money And Financial Services Ltd</h1>
             <p className="text-sm text-muted-foreground mt-1">Member portal</p>
           </div>
         </div>
@@ -186,7 +186,7 @@ export function MemberLogin() {
 
         <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
           <ShieldCheck className="w-3.5 h-3.5" />
-          <span>NJF Ledger — Secured with encrypted sessions</span>
+          <span>Bash M. Money And Financial Services Ltd — Secured with encrypted sessions</span>
         </div>
       </div>
     </div>

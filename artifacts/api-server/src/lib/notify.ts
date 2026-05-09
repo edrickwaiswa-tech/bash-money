@@ -31,7 +31,7 @@ export async function notifyMemberTransaction(params: {
   const balStr = formatAmount(runningBalance);
 
   const message = [
-    `NJF Ledger: ${typeName} of ${amtStr} ${verb} on your account (Ref: ${transactionRef}).`,
+    `Bash M. Money: ${typeName} of ${amtStr} ${verb} on your account (Ref: ${transactionRef}).`,
     `New balance: ${balStr}.`,
     notes ? `Note: ${notes}` : null,
     `For queries, contact your SACCO manager.`,
@@ -50,7 +50,7 @@ export async function notifyMemberTransaction(params: {
 
   logger.info({ memberId, phone: member.phone, transactionRef }, "📲 [SIMULATED WHATSAPP] Transaction alert sent");
   console.log(`\n╔══════════════════════════════════════════════╗`);
-  console.log(`║  📲  NJF Ledger — WhatsApp Notification       ║`);
+  console.log(`║  📲  Bash M. Money — WhatsApp Notification    ║`);
   console.log(`╠══════════════════════════════════════════════╣`);
   console.log(`║  To:   ${member.phone.padEnd(37)}║`);
   console.log(`║  Name: ${member.name.substring(0, 37).padEnd(37)}║`);
