@@ -66,6 +66,7 @@ export function MemberDetail() {
   const [editData, setEditData] = useState({ name: "", phone: "", idNumber: "" });
   const [isExporting, setIsExporting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [heroImgError, setHeroImgError] = useState(false);
 
   // Crop modal
   const [cropSrc, setCropSrc] = useState<string | null>(null);
@@ -209,7 +210,6 @@ export function MemberDetail() {
   const effectivePic = picPreview ?? (profile as any).profilePictureUrl ?? null;
   const effectiveSig = sigPreview ?? (profile as any).signatureUrl ?? null;
   const initials = profile.name.trim().split(/\s+/).map((n) => n[0]?.toUpperCase() ?? "").slice(0, 2).join("");
-  const [heroImgError, setHeroImgError] = useState(false);
 
   return (
     <div className="bg-[#f4f6fb] min-h-screen">
