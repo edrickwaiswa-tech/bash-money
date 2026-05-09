@@ -125,7 +125,7 @@ export function Reports() {
     setExporting(true);
     try {
       const label = periodLabel(period, customFrom, customTo);
-      await exportReportPDF(data, label, user?.fullName ?? user?.username ?? "Administrator", user?.profilePictureUrl ?? null);
+      await exportReportPDF(data, label, user?.fullName ?? user?.username ?? "Administrator", user?.profilePictureUrl ?? null, user?.employeeId);
       toast.success("Report PDF exported");
     } catch {
       toast.error("PDF export failed");

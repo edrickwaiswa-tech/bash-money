@@ -502,6 +502,7 @@ export async function exportReportPDF(
   periodLabel: string,
   adminName: string,
   adminPhotoUrl: string | null,
+  adminEmployeeId?: string | null,
 ): Promise<void> {
   const doc    = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const pageW  = doc.internal.pageSize.getWidth();
@@ -525,9 +526,13 @@ export async function exportReportPDF(
   doc.setFillColor(...GOLD);
   doc.rect(0, headerH - 1.5, pageW, 1.5, "F");
 
-  // Admin photo (right)
-  const photoX = pageW - margin - photoSize;
-  const photoY = photoPad;
+  // ── Right column: [Admin Name + Employee ID]  [Photo] ──────────────────────
+  const photoX   = pageW - margin - photoSize;
+  const photoY   = photoPad;
+  const nameGap  = 4;                          // mm gap between name block and photo
+  const nameRightEdge = photoX - nameGap;      // text right-aligns to this X
+
+  // Admin photo (far right)
   if (adminPhotoDataUrl) {
     doc.addImage(adminPhotoDataUrl, "PNG", photoX, photoY, photoSize, photoSize);
   } else {
@@ -542,14 +547,23 @@ export async function exportReportPDF(
     doc.text(initials, photoX + photoSize / 2, photoY + photoSize / 2 + 3, { align: "center" });
   }
 
-  // Admin name below photo
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(6);
-  doc.setTextColor(220, 210, 170);
-  doc.text(adminName, photoX + photoSize / 2, photoY + photoSize + 4, { align: "center", maxWidth: photoSize + 4 });
+  // Admin name — bold white, RIGHT-aligned just left of photo, vertically centred
+  const nameCenterY = photoY + photoSize / 2;  // same vertical centre as photo
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...WHITE);
+  doc.text(adminName, nameRightEdge, nameCenterY - 1.5, { align: "right", maxWidth: 48 });
 
-  // BMM badge + company name (left)
-  const textMaxW = photoX - margin - 6;
+  // Employee ID — smaller, gold-tinted, right-aligned below name
+  const empIdLabel = adminEmployeeId ? adminEmployeeId : "Administrator";
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.5);
+  doc.setTextColor(220, 210, 170);
+  doc.text(empIdLabel, nameRightEdge, nameCenterY + 4.5, { align: "right", maxWidth: 48 });
+
+  // ── Left column: BMM badge + company name ────────────────────────────────
+  // Max width = up to the admin name block (leave breathing room)
+  const textMaxW = nameRightEdge - 48 - margin - 4;  // up to start of name column
   const badgeX   = margin;
   const badgeY   = photoPad + 1;
 

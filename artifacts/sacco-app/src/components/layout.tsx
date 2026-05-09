@@ -41,11 +41,18 @@ export function Layout({ children }: LayoutProps) {
 
           {user && (
             <div className="flex items-center gap-2.5">
-              {/* Admin avatar + name — links to /profile */}
+              {/* Admin name + avatar pill — links to /profile */}
               <Link href="/profile">
-                <div className="flex items-center gap-2 bg-white/10 hover:bg-white/15 border border-white/10 rounded-full pl-1 pr-3 py-1 cursor-pointer transition-colors">
-                  {/* Avatar */}
-                  <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-[#c9a144]/20 border border-[#c9a144]/40 flex items-center justify-center">
+                <div className="flex items-center gap-3 bg-white/10 hover:bg-white/15 border border-white/10 rounded-full pl-3 pr-1.5 py-1 cursor-pointer transition-colors">
+                  {/* Name block — LEFT of photo */}
+                  <div className="leading-none text-right">
+                    <p className="text-[11px] font-black text-white leading-tight truncate max-w-[110px]">{displayName}</p>
+                    <p className="text-[9px] text-white/50 leading-tight mt-0.5 font-mono tracking-wide">
+                      {user.employeeId ?? "Admin"}
+                    </p>
+                  </div>
+                  {/* Avatar — RIGHT, ~12px gap from name via gap-3 */}
+                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-[#c9a144]/20 border-2 border-[#c9a144]/60 flex items-center justify-center">
                     {user.profilePictureUrl && !imgErr ? (
                       <img
                         src={user.profilePictureUrl}
@@ -56,13 +63,6 @@ export function Layout({ children }: LayoutProps) {
                     ) : (
                       <span className="text-[10px] font-black text-[#c9a144]">{initials}</span>
                     )}
-                  </div>
-                  <div className="hidden sm:block leading-none">
-                    <p className="text-[10px] font-black text-white leading-tight truncate max-w-[100px]">{displayName}</p>
-                    <p className="text-[9px] text-white/40 leading-tight flex items-center gap-0.5">
-                      <ShieldCheck className="w-2.5 h-2.5 text-[#c9a144]" />
-                      Admin
-                    </p>
                   </div>
                 </div>
               </Link>
