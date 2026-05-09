@@ -1,9 +1,14 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 
-interface AuthUser {
+export interface AuthUser {
   id: number;
   username: string;
   role: "admin";
+  fullName: string | null;
+  employeeId: string | null;
+  phone: string | null;
+  email: string | null;
+  profilePictureUrl: string | null;
 }
 
 interface AuthContextValue {
@@ -11,6 +16,8 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
+  setUser: (u: AuthUser | null) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -21,13 +28,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetch(`${BASE}/api/auth/me`, { credentials: "same-origin" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setUser(data))
-      .catch(() => setUser(null))
-      .finally(() => setIsLoading(false));
+  const fetchMe = useCallback(async () => {
+    try {
+      const r = await fetch(`${BASE}/api/auth/me`, { credentials: "same-origin" });
+      const data = r.ok ? await r.json() : null;
+      setUser(data);
+    } catch {
+      setUser(null);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchMe().finally(() => setIsLoading(false));
+  }, [fetchMe]);
 
   const login = async (username: string, pin: string) => {
     const res = await fetch(`${BASE}/api/auth/login`, {
@@ -40,20 +53,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await res.json();
       throw new Error(data.error ?? "Login failed");
     }
-    const data = await res.json();
-    setUser(data);
+    // Re-fetch full profile (login returns minimal data; /me returns everything)
+    await fetchMe();
   };
 
   const logout = async () => {
-    await fetch(`${BASE}/api/auth/logout`, {
-      method: "POST",
-      credentials: "same-origin",
-    });
+    await fetch(`${BASE}/api/auth/logout`, { method: "POST", credentials: "same-origin" });
     setUser(null);
   };
 
+  const refreshProfile = useCallback(async () => {
+    await fetchMe();
+  }, [fetchMe]);
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, refreshProfile, setUser }}>
       {children}
     </AuthContext.Provider>
   );

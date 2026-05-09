@@ -15,6 +15,7 @@ import { NewTransaction } from "@/pages/transactions/new";
 import { MemberLogin } from "@/pages/member-login";
 import { MemberPortal } from "@/pages/member-portal";
 import { SecuritySettings } from "@/pages/security-settings";
+import { AdminProfile } from "@/pages/admin-profile";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ function Router() {
             <Route path="/members" component={() => <ProtectedRoute component={MembersList} />} />
             <Route path="/transactions/new" component={() => <ProtectedRoute component={NewTransaction} />} />
             <Route path="/security" component={() => <ProtectedRoute component={SecuritySettings} />} />
+            <Route path="/profile" component={() => <ProtectedRoute component={AdminProfile} />} />
 
             {/* Public member self-service — no auth required */}
             <Route path="/members/:id" component={MemberDetail} />

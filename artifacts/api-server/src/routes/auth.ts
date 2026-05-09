@@ -68,7 +68,54 @@ router.get("/auth/me", async (req, res): Promise<void> => {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
-  res.json({ id: req.session.adminId, username: req.session.adminUsername, role: "admin" });
+  const [admin] = await db.select().from(adminUsersTable).where(eq(adminUsersTable.id, req.session.adminId));
+  if (!admin) { res.status(401).json({ error: "Not authenticated" }); return; }
+  res.json({
+    id: admin.id,
+    username: admin.username,
+    role: "admin",
+    fullName: admin.fullName,
+    employeeId: admin.employeeId,
+    phone: admin.phone,
+    email: admin.email,
+    profilePictureUrl: admin.profilePictureUrl,
+  });
+});
+
+// ── PATCH /auth/admin/profile ────────────────────────────────────────────────
+router.patch("/auth/admin/profile", async (req, res): Promise<void> => {
+  if (!req.session.adminId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { fullName, phone, email } = req.body;
+  await db.update(adminUsersTable).set({
+    fullName: fullName ?? null,
+    phone: phone ?? null,
+    email: email ?? null,
+  }).where(eq(adminUsersTable.id, req.session.adminId));
+  req.log.info({ adminId: req.session.adminId }, "Admin profile updated");
+  res.json({ success: true });
+});
+
+// ── POST /auth/admin/upload/profile-picture-data ─────────────────────────────
+router.post("/auth/admin/upload/profile-picture-data", async (req, res): Promise<void> => {
+  if (!req.session.adminId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { dataUrl } = req.body as { dataUrl: string };
+  if (!dataUrl?.startsWith("data:image/")) {
+    res.status(400).json({ error: "Invalid image data" }); return;
+  }
+  const base64 = dataUrl.split(",")[1];
+  const buf = Buffer.from(base64, "base64");
+  const { default: fs } = await import("fs");
+  const { default: path } = await import("path");
+  const { fileURLToPath } = await import("url");
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const dir = path.resolve(__dirname, "..", "uploads", "admin-avatars");
+  fs.mkdirSync(dir, { recursive: true });
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.png`;
+  fs.writeFileSync(path.join(dir, filename), buf);
+  const url = `/api/uploads/admin-avatars/${filename}`;
+  await db.update(adminUsersTable).set({ profilePictureUrl: url }).where(eq(adminUsersTable.id, req.session.adminId));
+  req.log.info({ adminId: req.session.adminId }, "Admin profile picture updated");
+  res.json({ url });
 });
 
 // ── POST /auth/forgot-pin/request-code ─────────────────────────────────────
