@@ -5,16 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <title>Bash M. Money And Financial Services Ltd</title>
 
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/bmm-logo-transparent.png" />
+    <link rel="icon" type="image/png" href="/icons/icon-192x192.png" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-    <!-- PWA / theme -->
-    <meta name="theme-color" content="#0f2557" />
-    <meta name="application-name" content="BMMFS" />
+    <!-- Theme colour (Android address bar + splash) -->
+    <meta name="theme-color" content="#1A365D" />
+    <meta name="application-name" content="Bash M. Money" />
     <meta name="description" content="SACCO digital banking and financial management platform by Bash M. Money And Financial Services Ltd." />
 
-    <!-- iOS PWA -->
+    <!-- iOS PWA — makes the app behave like a native app from the home screen -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="BMMFS" />
@@ -22,15 +25,15 @@
     <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png" />
 
+    <!-- Windows / Microsoft tiles -->
+    <meta name="msapplication-TileColor" content="#1A365D" />
+    <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
+
     <!-- Open Graph / social sharing -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Bash M. Money And Financial Services Ltd" />
     <meta property="og:description" content="SACCO digital banking and financial management platform." />
     <meta property="og:image" content="/bmm-logo-original.jpeg" />
-
-    <!-- Splash screen colour for TWA (Android) -->
-    <meta name="msapplication-TileColor" content="#0f2557" />
-    <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,5 +43,21 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Service Worker registration — runs after the page loads -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker
+            .register('/sw.js')
+            .then(function (reg) {
+              console.log('[BMMFS] Service worker registered. Scope:', reg.scope);
+            })
+            .catch(function (err) {
+              console.warn('[BMMFS] Service worker registration failed:', err);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
