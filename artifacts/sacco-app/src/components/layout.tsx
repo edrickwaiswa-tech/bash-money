@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Users, ArrowRightLeft, LogOut, UserCircle, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Users, ArrowRightLeft, LogOut, UserCircle, ShieldCheck, BarChart3 } from "lucide-react";
 import { ReactNode, useState } from "react";
 import { useAuth } from "@/contexts/auth";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ export function Layout({ children }: LayoutProps) {
     { href: "/", label: "Dashboard", icon: LayoutDashboard, adminOnly: true },
     { href: "/members", label: "Members", icon: Users, adminOnly: true },
     { href: "/transactions/new", label: "Transact", icon: ArrowRightLeft, adminOnly: true },
+    { href: "/reports", label: "Reports", icon: BarChart3, adminOnly: true },
     { href: "/profile", label: "Profile", icon: UserCircle, adminOnly: true },
   ];
 

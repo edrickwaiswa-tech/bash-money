@@ -468,3 +468,271 @@ export async function exportMemberStatementPDF(
   const date = new Date().toISOString().split("T")[0];
   doc.save(`BashM_Statement_${safeName}_${date}.pdf`);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  FINANCIAL REPORT PDF
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface ReportTxRow {
+  id: number;
+  transactionRef: string;
+  memberName: string;
+  accountNumber: string;
+  type: string;
+  direction: "credit" | "debit";
+  amount: number;
+  createdAt: string;
+}
+
+interface ReportSummaryData {
+  totalDeposits: number;
+  totalWithdrawals: number;
+  netCashFlow: number;
+}
+
+interface ReportData {
+  from: string;
+  to: string;
+  transactions: ReportTxRow[];
+  summary: ReportSummaryData;
+}
+
+export async function exportReportPDF(
+  data: ReportData,
+  periodLabel: string,
+  adminName: string,
+  adminPhotoUrl: string | null,
+): Promise<void> {
+  const doc    = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  const pageW  = doc.internal.pageSize.getWidth();
+  const margin = 14;
+
+  // Load admin photo
+  let adminPhotoDataUrl: string | null = null;
+  if (adminPhotoUrl) {
+    adminPhotoDataUrl = await loadCircularImage(adminPhotoUrl, 200);
+  }
+
+  // ── HEADER ─────────────────────────────────────────────────────────────────
+  const photoSize = 22;
+  const photoPad  = 5;
+  const headerH   = photoSize + photoPad * 2;
+
+  doc.setFillColor(...NAVY);
+  doc.rect(0, 0, pageW, headerH, "F");
+
+  // Gold accent stripe
+  doc.setFillColor(...GOLD);
+  doc.rect(0, headerH - 1.5, pageW, 1.5, "F");
+
+  // Admin photo (right)
+  const photoX = pageW - margin - photoSize;
+  const photoY = photoPad;
+  if (adminPhotoDataUrl) {
+    doc.addImage(adminPhotoDataUrl, "PNG", photoX, photoY, photoSize, photoSize);
+  } else {
+    doc.setFillColor(...GOLD);
+    doc.circle(photoX + photoSize / 2, photoY + photoSize / 2, photoSize / 2, "F");
+    doc.setFillColor(...NAVY);
+    doc.circle(photoX + photoSize / 2, photoY + photoSize / 2, photoSize / 2 - 1.2, "F");
+    const initials = adminName.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...GOLD);
+    doc.text(initials, photoX + photoSize / 2, photoY + photoSize / 2 + 3, { align: "center" });
+  }
+
+  // Admin name below photo
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6);
+  doc.setTextColor(220, 210, 170);
+  doc.text(adminName, photoX + photoSize / 2, photoY + photoSize + 4, { align: "center", maxWidth: photoSize + 4 });
+
+  // BMM badge + company name (left)
+  const textMaxW = photoX - margin - 6;
+  const badgeX   = margin;
+  const badgeY   = photoPad + 1;
+
+  doc.setFillColor(...GOLD);
+  doc.roundedRect(badgeX, badgeY, 14, 9, 1.5, 1.5, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(...NAVY);
+  doc.text("BMM", badgeX + 7, badgeY + 6, { align: "center" });
+
+  const textX = badgeX + 17;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...WHITE);
+  doc.text("BASH M. MONEY FINANCIAL SERVICES LTD", textX, badgeY + 5.5, { maxWidth: textMaxW });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(220, 210, 170);
+  doc.text("Financial Transaction Report", textX, badgeY + 13, { maxWidth: textMaxW });
+
+  let y = headerH + 6;
+
+  // ── REPORT TITLE BLOCK ─────────────────────────────────────────────────────
+  doc.setFillColor(...GOLD_LIGHT);
+  doc.roundedRect(margin, y, pageW - margin * 2, 20, 2, 2, "F");
+  doc.setDrawColor(...GOLD);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(margin, y, pageW - margin * 2, 20, 2, 2, "S");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.setTextColor(...NAVY);
+  doc.text("CONSOLIDATED TRANSACTIONS REPORT", pageW / 2, y + 7, { align: "center" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...MUTED);
+  doc.text(`Period: ${periodLabel}`, pageW / 2, y + 13.5, { align: "center" });
+
+  doc.setFontSize(7);
+  doc.text(
+    `Generated: ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}  |  Prepared by: ${adminName}`,
+    pageW / 2,
+    y + 18,
+    { align: "center" },
+  );
+
+  y += 26;
+
+  // ── SUMMARY CARDS ──────────────────────────────────────────────────────────
+  const cardW   = (pageW - margin * 2 - 6) / 3;
+  const cardH   = 22;
+  const cardY   = y;
+
+  const cards = [
+    { label: "Total Deposits",     value: data.summary.totalDeposits,    color: GREEN,       bgLight: GREEN_LIGHT },
+    { label: "Total Withdrawals",  value: data.summary.totalWithdrawals,  color: RED,         bgLight: RED_LIGHT   },
+    { label: "Net Cash Flow",      value: data.summary.netCashFlow,       color: NAVY,        bgLight: LIGHT_GRAY  },
+  ];
+
+  cards.forEach(({ label: cl, value, color, bgLight }, idx) => {
+    const cx = margin + idx * (cardW + 3);
+    doc.setFillColor(...bgLight);
+    doc.roundedRect(cx, cardY, cardW, cardH, 2, 2, "F");
+    doc.setDrawColor(...(color as [number, number, number]));
+    doc.setLineWidth(0.4);
+    doc.roundedRect(cx, cardY, cardW, cardH, 2, 2, "S");
+
+    // Top color bar
+    doc.setFillColor(...(color as [number, number, number]));
+    doc.roundedRect(cx, cardY, cardW, 4, 2, 2, "F");
+    doc.rect(cx, cardY + 2, cardW, 2, "F");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6);
+    doc.setTextColor(...(color as [number, number, number]));
+    doc.text(cl.toUpperCase(), cx + cardW / 2, cardY + 9.5, { align: "center" });
+
+    const sign = cl === "Net Cash Flow" && value < 0 ? "-" : cl === "Net Cash Flow" && value >= 0 ? "+" : "";
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...DARK);
+    doc.text(`${sign}${formatUsh(Math.abs(value))}`, cx + cardW / 2, cardY + 17, { align: "center", maxWidth: cardW - 4 });
+  });
+
+  y += cardH + 7;
+
+  // ── TRANSACTION TABLE ──────────────────────────────────────────────────────
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...NAVY);
+  doc.text("Transaction Details", margin, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(...MUTED);
+  doc.text(`${data.transactions.length} record${data.transactions.length !== 1 ? "s" : ""}`, pageW - margin, y, { align: "right" });
+
+  y += 4;
+
+  const tableRows = data.transactions.map((tx) => [
+    formatShortDate(tx.createdAt),
+    tx.memberName,
+    tx.accountNumber,
+    formatTransactionType(tx.type),
+    (tx.direction === "credit" ? "+" : "-") + formatUsh(tx.amount),
+  ]);
+
+  autoTable(doc, {
+    startY: y,
+    head: [["Date & Time", "Member Name", "Account No.", "Type", "Amount"]],
+    body: tableRows,
+    margin: { left: margin, right: margin },
+    styles: {
+      fontSize: 7.5,
+      cellPadding: 3,
+      font: "helvetica",
+      textColor: DARK,
+      lineColor: [220, 225, 235],
+      lineWidth: 0.15,
+    },
+    headStyles: {
+      fillColor: NAVY,
+      textColor: WHITE,
+      fontStyle: "bold",
+      fontSize: 7,
+    },
+    alternateRowStyles: { fillColor: LIGHT_GRAY },
+    columnStyles: {
+      0: { cellWidth: 32 },
+      1: { cellWidth: 42 },
+      2: { cellWidth: 32, textColor: [152, 110, 20], fontStyle: "bold" },
+      3: { cellWidth: 36 },
+      4: { halign: "right", fontStyle: "bold" },
+    },
+    didParseCell(hookData) {
+      if (hookData.section === "body" && hookData.column.index === 4) {
+        const raw = tableRows[hookData.row.index]?.[4] ?? "";
+        hookData.cell.styles.textColor = raw.startsWith("+") ? GREEN : RED;
+      }
+    },
+  });
+
+  // ── FOOTER on each page + signature on last ────────────────────────────────
+  const totalPages = (doc.internal as any).getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    const ph = doc.internal.pageSize.getHeight();
+
+    // Gold divider
+    doc.setFillColor(...GOLD);
+    doc.rect(margin, ph - 14, pageW - margin * 2, 0.5, "F");
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...MUTED);
+    doc.text("BASH M. MONEY FINANCIAL SERVICES LTD — Secured & Encrypted", margin, ph - 9);
+    doc.text(`Page ${i} of ${totalPages}`, pageW - margin, ph - 9, { align: "right" });
+
+    // Authorized signature on last page
+    if (i === totalPages) {
+      const sigX1    = pageW / 2 + 10;
+      const sigX2    = pageW - margin;
+      const sigLineY = ph - 30;
+
+      doc.setDrawColor(...NAVY);
+      doc.setLineWidth(0.4);
+      doc.line(sigX1, sigLineY, sigX2, sigLineY);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+      doc.setTextColor(...NAVY);
+      doc.text("Authorized Signature", (sigX1 + sigX2) / 2, sigLineY + 4, { align: "center" });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.5);
+      doc.setTextColor(...MUTED);
+      doc.text(adminName, (sigX1 + sigX2) / 2, sigLineY + 8.5, { align: "center" });
+      doc.text("Bash M. Money And Financial Services Ltd", (sigX1 + sigX2) / 2, sigLineY + 12.5, { align: "center" });
+    }
+  }
+
+  // ── Save ───────────────────────────────────────────────────────────────────
+  const date = new Date().toISOString().split("T")[0];
+  doc.save(`BashM_Report_${date}.pdf`);
+}
