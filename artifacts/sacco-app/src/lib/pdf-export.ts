@@ -193,27 +193,28 @@ export async function exportMemberStatementPDF(
     doc.text(initials, photoX + photoSize / 2, photoY + photoSize / 2 + 3.5, { align: "center" });
   }
 
-  // ── Left column: circular logo + company name ────────────────────────────
-  const logoMm   = photoSize;                     // same height as member photo
+  // ── Left column: full-height logo + company name ─────────────────────────
+  const logoPad  = 2;                             // 2mm gap from top & bottom
+  const logoMm   = headerH - logoPad * 2;         // fills header (= 30mm)
   const textX    = margin + logoMm + 4;           // company name starts after logo
   const textMaxW = photoX - textX - 6;            // constrained to photo gap
 
-  // Official BMMFS logo — white card behind it for full-colour contrast on navy
+  // Official BMMFS logo — pure white card for maximum print clarity
   if (logoDataUrl) {
     doc.setFillColor(255, 255, 255);
-    doc.roundedRect(margin - 0.8, photoPad - 0.8, logoMm + 1.6, logoMm + 1.6, 2, 2, "F");
-    doc.addImage(logoDataUrl, "JPEG", margin, photoPad, logoMm, logoMm);
+    doc.roundedRect(margin - 0.8, logoPad - 0.8, logoMm + 1.6, logoMm + 1.6, 2, 2, "F");
+    doc.addImage(logoDataUrl, "JPEG", margin, logoPad, logoMm, logoMm);
   } else {
     doc.setFillColor(...GOLD);
-    doc.circle(margin + logoMm / 2, photoPad + logoMm / 2, logoMm / 2, "F");
+    doc.circle(margin + logoMm / 2, logoPad + logoMm / 2, logoMm / 2, "F");
     doc.setFillColor(...NAVY);
-    doc.circle(margin + logoMm / 2, photoPad + logoMm / 2, logoMm / 2 - 2, "F");
+    doc.circle(margin + logoMm / 2, logoPad + logoMm / 2, logoMm / 2 - 2, "F");
     doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(...GOLD);
-    doc.text("BMM", margin + logoMm / 2, photoPad + logoMm / 2 + 3.5, { align: "center" });
+    doc.text("BMM", margin + logoMm / 2, logoPad + logoMm / 2 + 3.5, { align: "center" });
   }
 
   // Company name — vertically centred with logo
-  const textCY = photoPad + logoMm / 2;
+  const textCY = logoPad + logoMm / 2;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.setTextColor(...WHITE);
@@ -591,27 +592,28 @@ export async function exportReportPDF(
   doc.setTextColor(220, 210, 170);
   doc.text(empIdLabel, nameRightEdge, nameCenterY + 4.5, { align: "right", maxWidth: 48 });
 
-  // ── Left column: circular logo + company name ────────────────────────────
-  const logoMm   = photoSize;                          // same height as admin photo
+  // ── Left column: full-height logo + company name ─────────────────────────
+  const logoPad  = 2;
+  const logoMm   = headerH - logoPad * 2;              // fills header (= 28mm)
   const textX    = margin + logoMm + 4;
-  const textMaxW = nameRightEdge - 48 - textX - 4;    // up to start of name column
+  const textMaxW = nameRightEdge - 48 - textX - 4;
 
-  // Official BMMFS logo — white card behind it for full-colour contrast on navy
+  // Official BMMFS logo — pure white card for maximum print clarity
   if (logoDataUrl) {
     doc.setFillColor(255, 255, 255);
-    doc.roundedRect(margin - 0.8, photoPad - 0.8, logoMm + 1.6, logoMm + 1.6, 2, 2, "F");
-    doc.addImage(logoDataUrl, "JPEG", margin, photoPad, logoMm, logoMm);
+    doc.roundedRect(margin - 0.8, logoPad - 0.8, logoMm + 1.6, logoMm + 1.6, 2, 2, "F");
+    doc.addImage(logoDataUrl, "JPEG", margin, logoPad, logoMm, logoMm);
   } else {
     doc.setFillColor(...GOLD);
-    doc.circle(margin + logoMm / 2, photoPad + logoMm / 2, logoMm / 2, "F");
+    doc.circle(margin + logoMm / 2, logoPad + logoMm / 2, logoMm / 2, "F");
     doc.setFillColor(...NAVY);
-    doc.circle(margin + logoMm / 2, photoPad + logoMm / 2, logoMm / 2 - 2, "F");
+    doc.circle(margin + logoMm / 2, logoPad + logoMm / 2, logoMm / 2 - 2, "F");
     doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(...GOLD);
-    doc.text("BMM", margin + logoMm / 2, photoPad + logoMm / 2 + 3, { align: "center" });
+    doc.text("BMM", margin + logoMm / 2, logoPad + logoMm / 2 + 3, { align: "center" });
   }
 
   // Company name — vertically centred with logo
-  const textCY = photoPad + logoMm / 2;
+  const textCY = logoPad + logoMm / 2;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.setTextColor(...WHITE);

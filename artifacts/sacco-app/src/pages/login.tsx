@@ -150,8 +150,17 @@ export function Login() {
             filter: "blur(20px)",
           }}
         />
-        <div className="relative z-10 drop-shadow-2xl">
-          <BmmLogo size="xl" variant="badge" />
+        <div
+          className="relative z-10 rounded-2xl p-4"
+          style={{
+            background: "rgba(255,255,255,0.11)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            boxShadow: "0 4px 36px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(255,255,255,0.14), 0 0 48px rgba(255,245,170,0.07)",
+            filter: "drop-shadow(0 0 16px rgba(255,245,180,0.25))",
+          }}
+        >
+          <BmmLogo size="xl" />
         </div>
         <p className="text-white/45 text-[11px] mt-4 uppercase tracking-[0.2em] font-semibold relative z-10">
           {tab === "admin" ? "Authorized Personnel Only" : "Access your BMMFS account"}

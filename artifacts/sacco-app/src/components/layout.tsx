@@ -35,9 +35,11 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="flex flex-col min-h-[100dvh] bg-[#f4f6fb]">
-      <header className="sticky top-0 z-30 shadow-sm" style={{ background: "#0f2557" }}>
-        <div className="flex items-center justify-between px-4 h-16 max-w-lg mx-auto w-full">
-          <BmmLogo variant="full" size="sm" />
+      <header className="sticky top-0 z-30 shadow-sm" style={{ background: "#0f2557", borderBottom: "2px solid #c9a144" }}>
+        <div className="flex items-center justify-between px-4 h-[72px] max-w-lg mx-auto w-full">
+          <div style={{ filter: "drop-shadow(0 0 12px rgba(255,245,180,0.38)) drop-shadow(0 3px 14px rgba(0,0,0,0.5))" }}>
+            <BmmLogo size="md" />
+          </div>
 
           {user && (
             <div className="flex items-center gap-2.5">
