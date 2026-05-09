@@ -135,19 +135,45 @@ export async function exportMemberStatementPDF(
       : "No transactions";
 
   // ═══════════════════════════════════════════════════════════════════════════
-  //  HEADER BAR — navy background, full width
+  //  HEADER BAR — taller navy banner, photo isolated in right column
   // ═══════════════════════════════════════════════════════════════════════════
-  const headerH = 30;
+  const photoSize = 24;                         // mm — photo diameter
+  const photoPad  = 5;                          // gap around photo
+  const headerH   = photoSize + photoPad * 2;  // header height == photo + padding (34mm)
+
   doc.setFillColor(...NAVY);
   doc.rect(0, 0, pageW, headerH, "F");
 
-  // Gold accent stripe at bottom of header
+  // Gold accent stripe at very bottom of header
   doc.setFillColor(...GOLD);
-  doc.rect(0, headerH - 2, pageW, 2, "F");
+  doc.rect(0, headerH - 1.5, pageW, 1.5, "F");
 
-  // BMM badge (left)
-  const badgeX = margin;
-  const badgeY = 6;
+  // ── Photo area — right column, strictly isolated ─────────────────────────
+  const photoX = pageW - margin - photoSize;
+  const photoY = photoPad;                      // 5mm from top, fits inside 34mm header
+
+  if (photoDataUrl) {
+    doc.addImage(photoDataUrl, "PNG", photoX, photoY, photoSize, photoSize);
+  } else {
+    // Fallback: gold ring + navy fill + initials
+    doc.setFillColor(...GOLD);
+    doc.circle(photoX + photoSize / 2, photoY + photoSize / 2, photoSize / 2, "F");
+    doc.setFillColor(...NAVY);
+    doc.circle(photoX + photoSize / 2, photoY + photoSize / 2, photoSize / 2 - 1.2, "F");
+    const initials = profile.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...GOLD);
+    doc.text(initials, photoX + photoSize / 2, photoY + photoSize / 2 + 3.5, { align: "center" });
+  }
+
+  // ── Left text column — constrained to avoid photo ────────────────────────
+  // Max text width = space up to photo minus a gap
+  const textMaxW  = photoX - margin - 6;       // leave 6mm gap before photo
+  const badgeX    = margin;
+  const badgeY    = photoPad + 1;              // vertically centred near top
+
+  // BMM badge
   doc.setFillColor(...GOLD);
   doc.roundedRect(badgeX, badgeY, 14, 9, 1.5, 1.5, "F");
   doc.setFont("helvetica", "bold");
@@ -155,43 +181,20 @@ export async function exportMemberStatementPDF(
   doc.setTextColor(...NAVY);
   doc.text("BMM", badgeX + 7, badgeY + 6, { align: "center" });
 
-  // Company name (left, next to badge)
+  // Company name — clipped to text column
   const textX = badgeX + 17;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10.5);
+  doc.setFontSize(10);
   doc.setTextColor(...WHITE);
-  doc.text("BASH M. MONEY FINANCIAL SERVICES LTD", textX, badgeY + 5.5);
+  // Split long name if needed and draw only within textMaxW
+  const companyName = "BASH M. MONEY FINANCIAL SERVICES LTD";
+  doc.text(companyName, textX, badgeY + 5.5, { maxWidth: textMaxW });
 
+  // Subtitle — "Member Account Statement"
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
-  doc.setTextColor(220, 210, 170); // warm cream
-  doc.text("Member Account Statement", textX, badgeY + 12);
-
-  // Generated date (right side of header, below photo space)
-  const genDate = `Generated: ${formatShortDate(new Date().toISOString())}`;
-  doc.setFontSize(6.5);
-  doc.setTextColor(180, 190, 210);
-  doc.text(genDate, pageW - margin, headerH - 5, { align: "right" });
-
-  // ── Member photo (top-right, overlapping header/info box) ───────────────────
-  const photoSize = 22; // mm in PDF
-  const photoX    = pageW - margin - photoSize;
-  const photoY    = 4;
-
-  if (photoDataUrl) {
-    doc.addImage(photoDataUrl, "PNG", photoX, photoY, photoSize, photoSize);
-  } else {
-    // Fallback: initials circle with gold border
-    doc.setFillColor(...GOLD);
-    doc.circle(photoX + photoSize / 2, photoY + photoSize / 2, photoSize / 2, "F");
-    doc.setFillColor(...NAVY);
-    doc.circle(photoX + photoSize / 2, photoY + photoSize / 2, photoSize / 2 - 1, "F");
-    const initials = profile.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(...GOLD);
-    doc.text(initials, photoX + photoSize / 2, photoY + photoSize / 2 + 3.5, { align: "center" });
-  }
+  doc.setTextColor(220, 210, 170);
+  doc.text("Member Account Statement", textX, badgeY + 13, { maxWidth: textMaxW });
 
   let y = headerH + 4;
 
@@ -408,32 +411,45 @@ export async function exportMemberStatementPDF(
 
   // ═══════════════════════════════════════════════════════════════════════════
   //  PAGE FOOTER — all pages
+  //  Layout (3 rows above bottom edge):
+  //    row 1 (ph-16): gold divider line
+  //    row 2 (ph-11): left company name | center generated timestamp | right page#
+  //    row 3 (ph-6):  left "Confidential" note
   // ═══════════════════════════════════════════════════════════════════════════
+  const genDate = `Report generated on: ${formatShortDate(new Date().toISOString())}`;
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     const ph = doc.internal.pageSize.getHeight();
 
-    // Thin gold line
+    // Gold divider line
     doc.setDrawColor(...GOLD);
     doc.setLineWidth(0.5);
-    doc.line(margin, ph - 13, pageW - margin, ph - 13);
+    doc.line(margin, ph - 16, pageW - margin, ph - 16);
 
-    // Left: official tagline
+    // Left: company name (bold navy)
     doc.setFont("helvetica", "bold");
     doc.setFontSize(6.5);
     doc.setTextColor(...NAVY);
-    doc.text("Bash M. Money And Financial Services Ltd", margin, ph - 8);
+    doc.text("Bash M. Money And Financial Services Ltd", margin, ph - 11);
 
-    doc.setFont("helvetica", "normal");
+    // Center: generated timestamp (italic gray) — banking standard
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(6.5);
     doc.setTextColor(...MUTED);
-    doc.text("— Confidential Member Statement", margin + 67, ph - 8);
+    doc.text(genDate, pageW / 2, ph - 11, { align: "center" });
 
     // Right: page number
     doc.setFont("helvetica", "normal");
     doc.setFontSize(6.5);
     doc.setTextColor(...MUTED);
-    doc.text(`Page ${i} of ${totalPages}`, pageW - margin, ph - 8, { align: "right" });
+    doc.text(`Page ${i} of ${totalPages}`, pageW - margin, ph - 11, { align: "right" });
+
+    // Second line: confidential notice (left, muted)
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6);
+    doc.setTextColor(...MUTED);
+    doc.text("Confidential — For the named member only. Do not distribute.", margin, ph - 6);
   }
 
   // ── Save ─────────────────────────────────────────────────────────────────────
