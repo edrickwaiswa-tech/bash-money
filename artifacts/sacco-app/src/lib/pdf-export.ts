@@ -394,48 +394,6 @@ export async function exportMemberStatementPDF(
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  //  AUTHORIZED SIGNATURE LINE
-  // ═══════════════════════════════════════════════════════════════════════════
-  const sigY = finalTotalsY + totalsH + 8;
-
-  // Right-aligned signature block
-  const sigLineX1 = pageW / 2 + 10;
-  const sigLineX2 = pageW - margin;
-  doc.setDrawColor(...NAVY);
-  doc.setLineWidth(0.4);
-  doc.line(sigLineX1, sigY, sigLineX2, sigY);
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7);
-  doc.setTextColor(...NAVY);
-  doc.text("Authorized Signature", (sigLineX1 + sigLineX2) / 2, sigY + 4, { align: "center" });
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(6.5);
-  doc.setTextColor(...MUTED);
-  doc.text("Bash M. Money And Financial Services Ltd", (sigLineX1 + sigLineX2) / 2, sigY + 8, { align: "center" });
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  //  OFFICIAL STATEMENT NOTICE
-  // ═══════════════════════════════════════════════════════════════════════════
-  const noticeY = sigY + 13;
-  const noticeH = 9;
-  doc.setFillColor(...GOLD_LIGHT);
-  doc.roundedRect(margin, noticeY, pageW - margin * 2, noticeH, 2, 2, "F");
-  doc.setDrawColor(...GOLD);
-  doc.setLineWidth(0.4);
-  doc.roundedRect(margin, noticeY, pageW - margin * 2, noticeH, 2, 2, "S");
-  doc.setFont("helvetica", "bolditalic");
-  doc.setFontSize(7.5);
-  doc.setTextColor(...NAVY);
-  doc.text(
-    "This is an official document of Bash M. Money And Financial Services Ltd.",
-    pageW / 2,
-    noticeY + 6,
-    { align: "center" },
-  );
-
-  // ═══════════════════════════════════════════════════════════════════════════
   //  PAGE FOOTER — all pages
   //  Layout (3 rows above bottom edge):
   //    row 1 (ph-16): gold divider line
@@ -480,6 +438,29 @@ export async function exportMemberStatementPDF(
     doc.setFontSize(6);
     doc.setTextColor(...MUTED);
     doc.text("Support: Tel: +256 754 143594 / +256 782 547022", pageW - margin, ph - 8, { align: "right" });
+
+    // ── Authorized Signature — last page only, bottom-right ──────────────────
+    // Sits just above the gold divider, with ~25mm (≈1 inch) of empty stamp space above
+    if (i === totalPages) {
+      const sigX1    = pageW / 2 + 10;
+      const sigX2    = pageW - margin;
+      const sigLineY = ph - 30;   // the actual signature line (above footer divider)
+      // stamp/handwriting space: sigLineY - 25mm up to sigLineY — left intentionally empty
+
+      doc.setDrawColor(...NAVY);
+      doc.setLineWidth(0.4);
+      doc.line(sigX1, sigLineY, sigX2, sigLineY);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+      doc.setTextColor(...NAVY);
+      doc.text("Authorized Signature", (sigX1 + sigX2) / 2, sigLineY + 4, { align: "center" });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.5);
+      doc.setTextColor(...MUTED);
+      doc.text("Bash M. Money And Financial Services Ltd", (sigX1 + sigX2) / 2, sigLineY + 8, { align: "center" });
+    }
   }
 
   // ── Save ─────────────────────────────────────────────────────────────────────
