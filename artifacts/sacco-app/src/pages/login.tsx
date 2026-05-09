@@ -3,9 +3,9 @@ import { useLocation, Link } from "wouter";
 import { useAuth } from "@/contexts/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PinInput } from "@/components/pin-input";
-import { ShieldCheck } from "lucide-react";
+import { BmmLogo } from "@/components/bmm-logo";
+import { ShieldCheck, Lock } from "lucide-react";
 
 export function Login() {
   const { login } = useAuth();
@@ -36,41 +36,42 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gray-50 dark:bg-zinc-950 px-4">
-      <div className="w-full max-w-sm space-y-6">
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="bg-primary text-white p-3 rounded-2xl shadow-lg">
-            <span className="text-white font-black text-xl tracking-tight">BM</span>
-          </div>
-          <div>
-            <h1 className="text-2xl font-black tracking-tight">Bash M. Money And Financial Services Ltd</h1>
-            <p className="text-sm text-muted-foreground mt-1">Admin portal</p>
-          </div>
-        </div>
+    <div className="min-h-[100dvh] flex flex-col bg-[#f4f6fb]">
+      {/* Navy top banner */}
+      <div className="bg-[#0f2557] px-4 pt-12 pb-16 flex flex-col items-center text-center">
+        <BmmLogo size="lg" variant="badge" />
+        <h1 className="text-white font-black text-xl tracking-tight mt-4 leading-tight">
+          Bash M. Money And Financial<br />Services Ltd
+        </h1>
+        <p className="text-white/50 text-xs mt-1 uppercase tracking-widest font-medium">Admin Portal</p>
+      </div>
 
-        {/* Card */}
-        <Card className="shadow-md border-0">
-          <CardHeader className="pb-2 pt-6 px-6 text-center">
-            <p className="font-semibold text-base">Enter your PIN</p>
-            <p className="text-xs text-muted-foreground">4-digit admin PIN</p>
-          </CardHeader>
-          <CardContent className="px-6 pt-3 pb-6">
+      {/* Card floats over the banner */}
+      <div className="flex-1 px-4 -mt-8 flex flex-col max-w-sm mx-auto w-full">
+        <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+          {/* Card header */}
+          <div className="px-6 pt-7 pb-5 text-center border-b border-gray-50">
+            <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-[#0f2557]/5 mb-3">
+              <Lock className="w-5 h-5 text-[#0f2557]" />
+            </div>
+            <p className="font-bold text-[#0f2557] text-base">Enter your PIN</p>
+            <p className="text-xs text-muted-foreground mt-0.5">4-digit admin PIN</p>
+          </div>
+
+          <div className="px-6 py-6">
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Username (hidden / pre-filled for single-admin use) */}
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground font-medium">Username</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Username</label>
                 <Input
                   type="text"
                   autoComplete="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   disabled={isLoading}
-                  className="text-center"
+                  className="text-center rounded-xl border-[#0f2557]/15 focus-visible:ring-[#0f2557] h-11"
                 />
               </div>
 
-              {/* PIN boxes */}
               <PinInput
                 length={4}
                 value={pin}
@@ -81,34 +82,32 @@ export function Login() {
               />
 
               {error && (
-                <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md text-center">
+                <p className="text-sm text-destructive bg-destructive/8 px-3 py-2.5 rounded-xl text-center font-medium">
                   {error}
                 </p>
               )}
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full h-11 rounded-xl bg-[#0f2557] hover:bg-[#1a3570] text-white font-semibold text-sm transition-all"
                 disabled={isLoading || pin.length < 4}
               >
-                {isLoading ? "Signing in..." : "Sign in"}
+                {isLoading ? "Signing in…" : "Sign In"}
               </Button>
 
               <div className="text-center">
-                <Link
-                  href="/forgot-pin"
-                  className="text-sm text-primary hover:underline font-medium"
-                >
+                <Link href="/forgot-pin" className="text-sm text-[#c9a144] hover:text-[#0f2557] font-semibold transition-colors">
                   Forgot PIN?
                 </Link>
               </div>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-          <ShieldCheck className="w-3.5 h-3.5" />
-          <span>Bash M. Money And Financial Services Ltd — Secured with encrypted sessions</span>
+        {/* Trust footer */}
+        <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground mt-6 mb-8">
+          <ShieldCheck className="w-3.5 h-3.5 text-[#c9a144]" />
+          <span>Bash M. Money And Financial Services Ltd — Secured &amp; Encrypted</span>
         </div>
       </div>
     </div>
