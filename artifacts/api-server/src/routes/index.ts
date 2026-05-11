@@ -7,6 +7,7 @@ import dashboardRouter from "./dashboard";
 import memberNotificationsRouter from "./member-notifications";
 import uploadsRouter from "./uploads";
 import reportsRouter from "./reports";
+import loansRouter from "./loans";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(transactionsRouter);
 router.use(dashboardRouter);
 router.use(memberNotificationsRouter);
 router.use(reportsRouter);
+router.use(loansRouter);
 
 export default router;

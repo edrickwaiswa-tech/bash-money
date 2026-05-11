@@ -17,6 +17,7 @@ import { MemberPortal } from "@/pages/member-portal";
 import { SecuritySettings } from "@/pages/security-settings";
 import { AdminProfile } from "@/pages/admin-profile";
 import { Reports } from "@/pages/reports";
+import { Loans } from "@/pages/loans";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ function Router() {
             <Route path="/security" component={() => <ProtectedRoute component={SecuritySettings} />} />
             <Route path="/profile" component={() => <ProtectedRoute component={AdminProfile} />} />
             <Route path="/reports" component={() => <ProtectedRoute component={Reports} />} />
+            <Route path="/loans" component={() => <ProtectedRoute component={Loans} />} />
 
             {/* Public member self-service — no auth required */}
             <Route path="/members/:id" component={MemberDetail} />

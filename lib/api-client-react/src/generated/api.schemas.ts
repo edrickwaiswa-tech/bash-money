@@ -169,6 +169,17 @@ export interface TransactionReceipt {
   createdAt: string;
 }
 
+export interface ActiveLoanMember {
+  memberId: number;
+  memberName: string;
+  accountNumber: string;
+  phone: string;
+  outstandingLoan: number;
+  totalDisbursed: number;
+  totalRepaid: number;
+  lastDisbursementDate?: string | null;
+}
+
 export interface DashboardSummary {
   totalMembers: number;
   totalSavings: number;

@@ -225,6 +225,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /loans/active:
+    get:
+      operationId: getActiveLoans
+      tags: [loans]
+      summary: Get all members with outstanding loan balances
+      responses:
+        "200":
+          description: Active loan members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActiveLoanMember"
+
   /dashboard/summary:
     get:
       operationId: getDashboardSummary
@@ -514,6 +529,35 @@ components:
         - amount
         - runningBalance
         - createdAt
+
+    ActiveLoanMember:
+      type: object
+      properties:
+        memberId:
+          type: integer
+        memberName:
+          type: string
+        accountNumber:
+          type: string
+        phone:
+          type: string
+        outstandingLoan:
+          type: number
+        totalDisbursed:
+          type: number
+        totalRepaid:
+          type: number
+        lastDisbursementDate:
+          type: string
+          nullable: true
+      required:
+        - memberId
+        - memberName
+        - accountNumber
+        - phone
+        - outstandingLoan
+        - totalDisbursed
+        - totalRepaid
 
     DashboardSummary:
       type: object

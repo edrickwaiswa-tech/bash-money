@@ -214,6 +214,21 @@ export const GetTransactionResponse = zod.object({
 });
 
 /**
+ * @summary Get all members with outstanding loan balances
+ */
+export const GetActiveLoansResponseItem = zod.object({
+  memberId: zod.number(),
+  memberName: zod.string(),
+  accountNumber: zod.string(),
+  phone: zod.string(),
+  outstandingLoan: zod.number(),
+  totalDisbursed: zod.number(),
+  totalRepaid: zod.number(),
+  lastDisbursementDate: zod.string().nullish(),
+});
+export const GetActiveLoansResponse = zod.array(GetActiveLoansResponseItem);
+
+/**
  * @summary Get overall financial summary
  */
 export const GetDashboardSummaryResponse = zod.object({

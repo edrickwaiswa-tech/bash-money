@@ -20,8 +20,9 @@ export function NewTransaction() {
   const searchParams = new URLSearchParams(window.location.search);
   const initialMemberId = searchParams.get("memberId");
 
+  const initialType = (searchParams.get("type") as CreateTransactionBodyType) || "SAVINGS_DEPOSIT";
   const [memberId, setMemberId] = useState<string>(initialMemberId || "");
-  const [type, setType] = useState<CreateTransactionBodyType>("SAVINGS_DEPOSIT");
+  const [type, setType] = useState<CreateTransactionBodyType>(initialType);
   const [amount, setAmount] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [receipt, setReceipt] = useState<TransactionReceipt | null>(null);

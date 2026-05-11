@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  ActiveLoanMember,
   CreateMemberBody,
   CreateTransactionBody,
   DashboardSummary,
@@ -904,6 +905,81 @@ export function useGetTransaction<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetTransactionQueryOptions(transactionId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get all members with outstanding loan balances
+ */
+export const getGetActiveLoansUrl = () => {
+  return `/api/loans/active`;
+};
+
+export const getActiveLoans = async (
+  options?: RequestInit,
+): Promise<ActiveLoanMember[]> => {
+  return customFetch<ActiveLoanMember[]>(getGetActiveLoansUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetActiveLoansQueryKey = () => {
+  return [`/api/loans/active`] as const;
+};
+
+export const getGetActiveLoansQueryOptions = <
+  TData = Awaited<ReturnType<typeof getActiveLoans>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getActiveLoans>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetActiveLoansQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getActiveLoans>>> = ({
+    signal,
+  }) => getActiveLoans({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getActiveLoans>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetActiveLoansQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getActiveLoans>>
+>;
+export type GetActiveLoansQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get all members with outstanding loan balances
+ */
+
+export function useGetActiveLoans<
+  TData = Awaited<ReturnType<typeof getActiveLoans>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getActiveLoans>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetActiveLoansQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

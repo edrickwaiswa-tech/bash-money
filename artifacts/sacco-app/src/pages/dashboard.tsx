@@ -41,15 +41,17 @@ export function Dashboard() {
                 <span className="text-lg font-black text-[#0f2557]">{formatCurrency(summary.totalSavings)}</span>
               </div>
 
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <div className="w-6 h-6 rounded-lg bg-red-50 flex items-center justify-center">
-                    <Landmark className="h-3.5 w-3.5 text-destructive" />
+              <Link href="/loans">
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:border-red-200 transition-colors cursor-pointer">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <div className="w-6 h-6 rounded-lg bg-red-50 flex items-center justify-center">
+                      <Landmark className="h-3.5 w-3.5 text-destructive" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Active Loans</span>
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Active Loans</span>
+                  <span className="text-lg font-black text-destructive">{formatCurrency(summary.totalLoansOutstanding)}</span>
                 </div>
-                <span className="text-lg font-black text-destructive">{formatCurrency(summary.totalLoansOutstanding)}</span>
-              </div>
+              </Link>
 
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                 <div className="flex items-center gap-1.5 mb-2">

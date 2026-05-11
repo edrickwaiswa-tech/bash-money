@@ -318,14 +318,19 @@ export function MemberDetail() {
       {/* ── Tabs ── */}
       <div className="px-4 pt-4 pb-8">
         <Tabs defaultValue="ledger" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-white rounded-xl shadow-sm border border-gray-100 p-1 h-auto mb-4">
-            {["ledger", "profile", "signature"].map((tab) => (
+          <TabsList className="grid w-full grid-cols-4 bg-white rounded-xl shadow-sm border border-gray-100 p-1 h-auto mb-4">
+            {[
+              { value: "ledger", label: "Ledger" },
+              { value: "loans", label: "Loans" },
+              { value: "profile", label: "Profile" },
+              { value: "signature", label: "Sig." },
+            ].map((tab) => (
               <TabsTrigger
-                key={tab}
-                value={tab}
-                className="rounded-lg text-xs font-semibold py-2.5 data-[state=active]:bg-[#0f2557] data-[state=active]:text-white data-[state=active]:shadow capitalize"
+                key={tab.value}
+                value={tab.value}
+                className="rounded-lg text-xs font-semibold py-2.5 data-[state=active]:bg-[#0f2557] data-[state=active]:text-white data-[state=active]:shadow"
               >
-                {tab}
+                {tab.label}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -365,6 +370,110 @@ export function MemberDetail() {
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          {/* ── LOANS ── */}
+          <TabsContent value="loans" className="space-y-3 mt-0">
+            {(() => {
+              const loanEntries = ledger?.entries.filter(
+                e => e.type === "LOAN_DISBURSEMENT" || e.type === "LOAN_REPAYMENT"
+              ) ?? [];
+              const outstanding = profile.outstandingLoan;
+              const disbursed = loanEntries
+                .filter(e => e.type === "LOAN_DISBURSEMENT")
+                .reduce((s, e) => s + e.amount, 0);
+              const repaid = loanEntries
+                .filter(e => e.type === "LOAN_REPAYMENT")
+                .reduce((s, e) => s + e.amount, 0);
+              const pct = disbursed > 0 ? Math.min(100, (repaid / disbursed) * 100) : 0;
+
+              return (
+                <>
+                  {/* Loan summary card */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="text-center">
+                        <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Disbursed</p>
+                        <p className="font-black text-sm text-[#0f2557] mt-0.5">{formatCurrency(disbursed)}</p>
+                      </div>
+                      <div className="text-center border-x border-gray-100">
+                        <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Repaid</p>
+                        <p className="font-black text-sm text-emerald-600 mt-0.5">{formatCurrency(repaid)}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Outstanding</p>
+                        <p className={`font-black text-sm mt-0.5 ${outstanding > 0 ? "text-destructive" : "text-emerald-600"}`}>
+                          {formatCurrency(outstanding)}
+                        </p>
+                      </div>
+                    </div>
+                    {disbursed > 0 && (
+                      <div>
+                        <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+                          <span>Repayment progress</span>
+                          <span>{pct.toFixed(0)}%</span>
+                        </div>
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quick action buttons */}
+                  <div className="flex gap-2">
+                    <Button size="sm" asChild className="flex-1 gap-1.5 bg-[#0f2557] hover:bg-[#1a3570] text-white rounded-lg h-9 text-xs">
+                      <Link href={`/transactions/new?memberId=${memberId}&type=LOAN_DISBURSEMENT`}>
+                        + Disburse Loan
+                      </Link>
+                    </Button>
+                    {outstanding > 0 && (
+                      <Button size="sm" variant="outline" asChild className="flex-1 gap-1.5 rounded-lg h-9 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+                        <Link href={`/transactions/new?memberId=${memberId}&type=LOAN_REPAYMENT`}>
+                          Record Repayment
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Loan transaction history */}
+                  <h3 className="font-bold text-[#0f2557] text-sm">Loan History</h3>
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    {isLedgerLoading ? (
+                      <div className="p-6 text-center text-sm text-muted-foreground">Loading…</div>
+                    ) : loanEntries.length === 0 ? (
+                      <div className="p-10 text-center text-muted-foreground text-sm">No loan transactions yet</div>
+                    ) : (
+                      <div className="divide-y divide-gray-50">
+                        {loanEntries.map(entry => (
+                          <div key={entry.id} className="px-4 py-3.5">
+                            <div className="flex justify-between items-start mb-1">
+                              <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                entry.type === "LOAN_DISBURSEMENT"
+                                  ? "bg-red-50 text-destructive"
+                                  : "bg-emerald-50 text-emerald-700"
+                              }`}>
+                                {entry.type === "LOAN_DISBURSEMENT" ? "Disbursed" : "Repayment"}
+                              </div>
+                              <div className={`font-black text-sm ${entry.type === "LOAN_DISBURSEMENT" ? "text-destructive" : "text-emerald-600"}`}>
+                                {entry.type === "LOAN_DISBURSEMENT" ? "+" : "-"}{formatCurrency(entry.amount)}
+                              </div>
+                            </div>
+                            <div className="flex justify-between items-center text-[11px] text-muted-foreground mt-1">
+                              <span>{formatDate(entry.createdAt)}</span>
+                              <span className="font-mono">{entry.transactionRef}</span>
+                            </div>
+                            {entry.notes && (
+                              <p className="mt-2 text-[11px] text-muted-foreground bg-[#f4f6fb] px-2.5 py-1.5 rounded-lg">{entry.notes}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
           </TabsContent>
 
           {/* ── PROFILE ── */}
