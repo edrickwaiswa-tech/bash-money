@@ -1,9 +1,9 @@
 interface BmmLogoProps {
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "nav" | "lg" | "xl";
   className?: string;
 }
 
-const HEIGHT: Record<string, number> = { sm: 44, md: 60, lg: 100, xl: 180 };
+const HEIGHT: Record<string, number> = { sm: 44, md: 60, nav: 76, lg: 100, xl: 180 };
 
 export function BmmLogo({ size = "md", className = "" }: BmmLogoProps) {
   const h = HEIGHT[size] ?? 60;
