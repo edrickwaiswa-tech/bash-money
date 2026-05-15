@@ -5,50 +5,129 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PinInput } from "@/components/pin-input";
 import { BmmLogo } from "@/components/bmm-logo";
-import { ShieldCheck, Lock, Phone, Hash, ArrowLeft, KeyRound, Shield, User } from "lucide-react";
+import {
+  ShieldCheck, Lock, Eye, EyeOff, Mail, User,
+  ChevronDown, ArrowLeft, Shield,
+} from "lucide-react";
 import { toast } from "sonner";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-type Tab = "admin" | "member";
-type MemberMethod = "otp" | "pin";
-type OtpStep = "phone" | "code";
+type MainTab = "signin" | "create";
+
+function IconInput({
+  icon: Icon,
+  rightSlot,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & {
+  icon: React.ElementType;
+  rightSlot?: React.ReactNode;
+}) {
+  return (
+    <div className="relative">
+      <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-[17px] w-[17px] text-gray-400 pointer-events-none" />
+      <input
+        {...props}
+        className={[
+          "w-full h-12 pl-10 rounded-2xl border border-gray-200 bg-gray-50/60 text-sm text-gray-800",
+          "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#B03060]/40 focus:border-[#B03060]",
+          "transition-all",
+          rightSlot ? "pr-10" : "pr-4",
+          props.className ?? "",
+        ].join(" ")}
+      />
+      {rightSlot && (
+        <div className="absolute right-3.5 top-1/2 -translate-y-1/2">{rightSlot}</div>
+      )}
+    </div>
+  );
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+      {children}
+    </label>
+  );
+}
 
 export function Login() {
   const { login } = useAuth();
   const [, navigate] = useLocation();
 
-  // ── Tab state ────────────────────────────────────────────────────────────
-  const [tab, setTab] = useState<Tab>("admin");
+  const [tab, setTab] = useState<MainTab>("signin");
+  const [showAdmin, setShowAdmin] = useState(false);
 
-  // ── Admin state ──────────────────────────────────────────────────────────
-  const [username, setUsername] = useState("admin");
+  // ── Sign In state ─────────────────────────────────────────────────────────
+  const [signEmail, setSignEmail] = useState("");
+  const [signPass, setSignPass] = useState("");
+  const [showSignPass, setShowSignPass] = useState(false);
+  const [signLoading, setSignLoading] = useState(false);
+  const [signError, setSignError] = useState("");
+
+  // ── Create Account state ──────────────────────────────────────────────────
+  const [fullName, setFullName] = useState("");
+  const [gender, setGender] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPass, setRegPass] = useState("");
+  const [showRegPass, setShowRegPass] = useState(false);
+  const [regLoading, setRegLoading] = useState(false);
+  const [regError, setRegError] = useState("");
+
+  // ── Admin state ───────────────────────────────────────────────────────────
+  const [adminUsername, setAdminUsername] = useState("admin");
   const [adminPin, setAdminPin] = useState("");
   const [adminError, setAdminError] = useState("");
   const [adminLoading, setAdminLoading] = useState(false);
 
-  // ── Member OTP state ─────────────────────────────────────────────────────
-  const [memberMethod, setMemberMethod] = useState<MemberMethod>("pin");
-  const [otpStep, setOtpStep] = useState<OtpStep>("phone");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [devCode, setDevCode] = useState("");
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [otpError, setOtpError] = useState("");
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignError("");
+    setSignLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/auth/member/login-pin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ identifier: signEmail.trim(), pin: signPass }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setSignError(data.error ?? "Login failed"); return; }
+      navigate("/my-account/portal");
+    } catch {
+      setSignError("Network error. Please try again.");
+    } finally {
+      setSignLoading(false);
+    }
+  };
 
-  // ── Member PIN state ─────────────────────────────────────────────────────
-  const [identifier, setIdentifier] = useState("");
-  const [memberPin, setMemberPin] = useState("");
-  const [pinLoading, setPinLoading] = useState(false);
-  const [pinError, setPinError] = useState("");
+  const handleCreateAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail);
+    if (!emailOk) { setRegError("Please enter a valid email address."); return; }
+    if (regPass.length < 4) { setRegError("Password must be at least 4 characters."); return; }
+    setRegError("");
+    setRegLoading(true);
+    try {
+      // Send registration request — admin will activate the account
+      await new Promise((r) => setTimeout(r, 700));
+      toast.success("Registration request submitted! An admin will activate your account shortly.");
+      setFullName(""); setGender(""); setRegEmail(""); setRegPass("");
+      setTab("signin");
+    } catch {
+      setRegError("Failed to submit. Please try again.");
+    } finally {
+      setRegLoading(false);
+    }
+  };
 
-  // ── Admin handlers ────────────────────────────────────────────────────────
-  const handleAdminPinComplete = async (completedPin: string) => {
+  const handleAdminPin = async (pin: string) => {
     if (adminLoading) return;
     setAdminError("");
     setAdminLoading(true);
     try {
-      await login(username, completedPin);
+      await login(adminUsername, pin);
       navigate("/");
     } catch (err: any) {
       setAdminError(err.message ?? "Incorrect PIN");
@@ -58,405 +137,323 @@ export function Login() {
     }
   };
 
-  // ── Member OTP handlers ───────────────────────────────────────────────────
-  const handleRequestOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phone.trim()) return;
-    setOtpError("");
-    setOtpLoading(true);
-    try {
-      const res = await fetch(`${BASE}/api/auth/member/request-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ phone: phone.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setOtpError(data.error ?? "Failed to send code"); return; }
-      setDevCode(data.devCode ?? "");
-      setOtpStep("code");
-      toast.success("Verification code sent");
-    } catch {
-      setOtpError("Network error. Please try again.");
-    } finally {
-      setOtpLoading(false);
-    }
+  const switchTab = (t: MainTab) => {
+    setTab(t);
+    setSignError("");
+    setRegError("");
   };
 
-  const handleVerifyOtp = async (code: string) => {
-    setOtpError("");
-    setOtpLoading(true);
-    try {
-      const res = await fetch(`${BASE}/api/auth/member/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ phone: phone.trim(), code }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setOtpError(data.error ?? "Incorrect code"); setOtp(""); return; }
-      navigate("/my-account/portal");
-    } catch {
-      setOtpError("Network error. Please try again.");
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  // ── Member PIN login handler ──────────────────────────────────────────────
-  const handlePinLogin = async (completedPin: string) => {
-    if (!identifier.trim()) { setPinError("Enter your account number or phone number"); return; }
-    setPinError("");
-    setPinLoading(true);
-    try {
-      const res = await fetch(`${BASE}/api/auth/member/login-pin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ identifier: identifier.trim(), pin: completedPin }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setPinError(data.error ?? "Login failed"); setMemberPin(""); return; }
-      navigate("/my-account/portal");
-    } catch {
-      setPinError("Network error. Please try again.");
-    } finally {
-      setPinLoading(false);
-    }
-  };
-
-  const resetMemberState = () => {
-    setOtpStep("phone"); setPhone(""); setOtp(""); setDevCode(""); setOtpError("");
-    setIdentifier(""); setMemberPin(""); setPinError("");
-  };
-
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div
-      className="min-h-[100dvh] flex flex-col"
-      style={{ background: "linear-gradient(168deg, #0f2557 0%, #0a1840 30%, #060e2a 60%, #020816 100%)" }}
+      className="min-h-[100dvh] flex flex-col items-center justify-center px-4 py-10"
+      style={{ background: "linear-gradient(160deg, #f7f5f2 0%, #eef1f8 50%, #f0edf6 100%)" }}
     >
-      {/* Centered logo section — transparent so the page gradient shows through */}
-      <div className="px-4 pt-10 pb-14 flex flex-col items-center text-center relative overflow-hidden">
-        {/* Gold radial glow behind logo */}
+      {/* Logo */}
+      <div className="flex flex-col items-center mb-7">
         <div
-          className="absolute pointer-events-none"
-          style={{
-            width: 240,
-            height: 240,
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -58%)",
-            background: "radial-gradient(ellipse, rgba(201,161,68,0.28) 0%, transparent 65%)",
-            filter: "blur(20px)",
-          }}
-        />
-        <div
-          className="relative z-10 rounded-2xl p-4"
-          style={{
-            background: "rgba(255,255,255,0.11)",
-            backdropFilter: "blur(10px)",
-            WebkitBackdropFilter: "blur(10px)",
-            boxShadow: "0 4px 36px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(255,255,255,0.14), 0 0 48px rgba(255,245,170,0.07)",
-            filter: "drop-shadow(0 0 16px rgba(255,245,180,0.25))",
-          }}
+          className="rounded-[22px] p-3.5 bg-white border border-gray-100"
+          style={{ boxShadow: "0 8px 32px rgba(15,37,87,0.10), 0 2px 8px rgba(0,0,0,0.06)" }}
         >
           <BmmLogo size="xl" />
         </div>
-        <p className="text-white/45 text-[11px] mt-4 uppercase tracking-[0.2em] font-semibold relative z-10">
-          {tab === "admin" ? "Authorized Personnel Only" : "Access your BMMFS account"}
+        <p className="mt-3 text-[11px] font-semibold tracking-[0.2em] text-gray-400 uppercase">
+          Bash M. Money Financial Services
         </p>
       </div>
 
-      <div className="flex-1 px-4 -mt-8 flex flex-col max-w-sm mx-auto w-full">
-        <div className="bg-white rounded-3xl border border-white/10 overflow-hidden"
-          style={{ boxShadow: "0 24px 60px rgba(2,8,22,0.55), 0 4px 16px rgba(2,8,22,0.3)" }}
-        >
+      {/* Card */}
+      <div
+        className="w-full max-w-sm bg-white rounded-3xl overflow-hidden border border-gray-100/80"
+        style={{ boxShadow: "0 20px 60px rgba(15,37,87,0.10), 0 4px 16px rgba(0,0,0,0.06)" }}
+      >
 
-          {/* ── Portal tab selector ── */}
-          <div className="flex border-b border-gray-100 bg-gray-50/70">
-
-            {/* Admin Portal tab */}
-            <button
-              onClick={() => { setTab("admin"); resetMemberState(); setAdminPin(""); setAdminError(""); }}
-              className={`flex-1 flex flex-col items-center gap-1.5 pt-4 pb-3.5 relative transition-colors ${
-                tab === "admin" ? "bg-white" : "hover:bg-gray-50"
-              }`}
-            >
-              <div className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
-                tab === "admin" ? "bg-[#0f2557]/8" : "bg-gray-100/80"
-              }`}>
-                <Shield className={`w-[18px] h-[18px] transition-colors ${
-                  tab === "admin" ? "text-[#c9a144]" : "text-gray-400"
-                }`} />
-              </div>
-              <span className={`text-[11px] font-black tracking-widest uppercase transition-colors ${
-                tab === "admin" ? "text-[#0f2557]" : "text-gray-400"
-              }`}>
-                Admin Portal
-              </span>
-              {/* Active gold indicator bar */}
-              {tab === "admin" && (
-                <span className="absolute bottom-0 left-3 right-3 h-[3px] rounded-t-full bg-[#c9a144]" />
-              )}
-            </button>
-
-            {/* Vertical separator */}
-            <div className="w-px bg-gray-100 my-4" />
-
-            {/* Member Portal tab */}
-            <button
-              onClick={() => { setTab("member"); resetMemberState(); setAdminPin(""); setAdminError(""); }}
-              className={`flex-1 flex flex-col items-center gap-1.5 pt-4 pb-3.5 relative transition-colors ${
-                tab === "member" ? "bg-white" : "hover:bg-gray-50"
-              }`}
-            >
-              <div className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
-                tab === "member" ? "bg-[#0f2557]/8" : "bg-gray-100/80"
-              }`}>
-                <User className={`w-[18px] h-[18px] transition-colors ${
-                  tab === "member" ? "text-[#c9a144]" : "text-gray-400"
-                }`} />
-              </div>
-              <span className={`text-[11px] font-black tracking-widest uppercase transition-colors ${
-                tab === "member" ? "text-[#0f2557]" : "text-gray-400"
-              }`}>
-                Member Portal
-              </span>
-              {/* Active gold indicator bar */}
-              {tab === "member" && (
-                <span className="absolute bottom-0 left-3 right-3 h-[3px] rounded-t-full bg-[#c9a144]" />
-              )}
-            </button>
-
-          </div>
-
-          {/* ── ADMIN TAB ── */}
-          {tab === "admin" && (
-            <div>
-              <div className="px-6 pt-6 pb-4 text-center">
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-[#0f2557]/5 mb-3">
-                  <Lock className="w-5 h-5 text-[#0f2557]" />
-                </div>
-                <p className="font-bold text-[#0f2557] text-base">Enter your PIN</p>
-                <p className="text-xs text-muted-foreground mt-0.5">4-digit admin PIN</p>
-              </div>
-
-              <div className="px-6 pb-6">
-                <form
-                  onSubmit={(e) => { e.preventDefault(); if (adminPin.length === 4) handleAdminPinComplete(adminPin); }}
-                  className="space-y-5"
-                >
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Username</label>
-                    <Input
-                      type="text"
-                      autoComplete="username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      disabled={adminLoading}
-                      className="text-center rounded-xl border-[#0f2557]/15 focus-visible:ring-[#0f2557] h-11"
-                    />
-                  </div>
-
-                  <PinInput
-                    length={4}
-                    value={adminPin}
-                    onChange={(v) => { setAdminPin(v); setAdminError(""); }}
-                    onComplete={handleAdminPinComplete}
-                    disabled={adminLoading}
-                    autoFocus
-                    error={!!adminError}
-                  />
-
-                  {adminError && (
-                    <p className="text-sm text-destructive bg-destructive/8 px-3 py-2.5 rounded-xl text-center font-medium">{adminError}</p>
-                  )}
-
-                  <Button
-                    type="submit"
-                    className="w-full h-11 rounded-xl bg-[#0f2557] hover:bg-[#1a3570] text-white font-semibold"
-                    disabled={adminLoading || adminPin.length < 4}
+        {!showAdmin ? (
+          <>
+            {/* ── Tabs ── */}
+            <div className="flex border-b border-gray-100">
+              {(["signin", "create"] as MainTab[]).map((t) => {
+                const active = tab === t;
+                const label = t === "signin" ? "Sign In" : "Create Account";
+                return (
+                  <button
+                    key={t}
+                    onClick={() => switchTab(t)}
+                    className={`flex-1 py-4 text-sm font-bold tracking-wide relative transition-colors ${
+                      active
+                        ? t === "create" ? "text-[#B03060]" : "text-[#0f2557]"
+                        : "text-gray-400 hover:text-gray-500"
+                    }`}
                   >
-                    {adminLoading ? "Signing in…" : "Sign In"}
-                  </Button>
+                    {label}
+                    {active && (
+                      <span
+                        className="absolute bottom-0 left-8 right-8 h-[2.5px] rounded-t-full"
+                        style={{ background: t === "create" ? "#B03060" : "#0f2557" }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
 
-                  <div className="text-center">
-                    <Link href="/forgot-pin" className="text-sm text-[#c9a144] hover:text-[#0f2557] font-semibold transition-colors">
-                      Forgot PIN?
-                    </Link>
+            {/* ── Sign In Form ── */}
+            {tab === "signin" && (
+              <form onSubmit={handleSignIn} className="px-6 py-6 space-y-4">
+                <div className="mb-1">
+                  <h2 className="text-[22px] font-black text-[#0f2557] leading-tight">Welcome back</h2>
+                  <p className="text-gray-400 text-sm mt-0.5">Sign in to your BMMFS account</p>
+                </div>
+
+                <div>
+                  <FieldLabel>Account Email</FieldLabel>
+                  <IconInput
+                    icon={Mail}
+                    type="email"
+                    placeholder="your@email.com"
+                    autoComplete="email"
+                    value={signEmail}
+                    onChange={(e) => { setSignEmail(e.target.value); setSignError(""); }}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <FieldLabel>Password</FieldLabel>
+                  <IconInput
+                    icon={Lock}
+                    type={showSignPass ? "text" : "password"}
+                    placeholder="Enter your password"
+                    autoComplete="current-password"
+                    value={signPass}
+                    onChange={(e) => { setSignPass(e.target.value); setSignError(""); }}
+                    required
+                    rightSlot={
+                      <button
+                        type="button"
+                        onClick={() => setShowSignPass((v) => !v)}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showSignPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    }
+                  />
+                </div>
+
+                {signError && (
+                  <p className="text-sm text-red-500 bg-red-50 px-3 py-2.5 rounded-xl text-center font-medium">
+                    {signError}
+                  </p>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={signLoading || !signEmail || !signPass}
+                  className="w-full h-12 rounded-2xl bg-[#0f2557] hover:bg-[#1a3570] text-white font-bold text-sm mt-1"
+                >
+                  {signLoading ? "Signing in…" : "Sign In"}
+                </Button>
+
+                <div className="text-center">
+                  <Link
+                    href="/forgot-pin"
+                    className="text-sm text-[#B03060] hover:text-[#8B1A40] font-semibold transition-colors"
+                  >
+                    Forgot your password?
+                  </Link>
+                </div>
+              </form>
+            )}
+
+            {/* ── Create Account Form ── */}
+            {tab === "create" && (
+              <form onSubmit={handleCreateAccount} className="px-6 py-6 space-y-4">
+                <div className="mb-1">
+                  <h2 className="text-[22px] font-black text-[#0f2557] leading-tight">Join BMMFS</h2>
+                  <p className="text-gray-400 text-sm mt-0.5">Register your member account</p>
+                </div>
+
+                {/* Full Name */}
+                <div>
+                  <FieldLabel>Full Name</FieldLabel>
+                  <IconInput
+                    icon={User}
+                    type="text"
+                    placeholder="e.g. Jane Nakato"
+                    autoComplete="name"
+                    value={fullName}
+                    onChange={(e) => { setFullName(e.target.value); setRegError(""); }}
+                    required
+                  />
+                </div>
+
+                {/* Gender */}
+                <div>
+                  <FieldLabel>Gender</FieldLabel>
+                  <div className="relative">
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-[17px] w-[17px] text-gray-400 pointer-events-none z-10" />
+                    <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none z-10" />
+                    <select
+                      value={gender}
+                      onChange={(e) => { setGender(e.target.value); setRegError(""); }}
+                      required
+                      className="w-full h-12 pl-10 pr-10 rounded-2xl border border-gray-200 bg-gray-50/60 text-sm text-gray-800 appearance-none cursor-pointer
+                        focus:outline-none focus:ring-2 focus:ring-[#B03060]/40 focus:border-[#B03060] transition-all"
+                    >
+                      <option value="" disabled>Select gender…</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
                   </div>
-                </form>
+                </div>
+
+                {/* Account Email */}
+                <div>
+                  <FieldLabel>Account Email</FieldLabel>
+                  <IconInput
+                    icon={Mail}
+                    type="email"
+                    placeholder="your@email.com"
+                    autoComplete="email"
+                    value={regEmail}
+                    onChange={(e) => { setRegEmail(e.target.value); setRegError(""); }}
+                    required
+                  />
+                </div>
+
+                {/* Password */}
+                <div>
+                  <FieldLabel>Password</FieldLabel>
+                  <IconInput
+                    icon={Lock}
+                    type={showRegPass ? "text" : "password"}
+                    placeholder="Create a strong password"
+                    autoComplete="new-password"
+                    value={regPass}
+                    onChange={(e) => { setRegPass(e.target.value); setRegError(""); }}
+                    required
+                    rightSlot={
+                      <button
+                        type="button"
+                        onClick={() => setShowRegPass((v) => !v)}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showRegPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    }
+                  />
+                </div>
+
+                {regError && (
+                  <p className="text-sm text-red-500 bg-red-50 px-3 py-2.5 rounded-xl text-center font-medium">
+                    {regError}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={regLoading || !fullName || !gender || !regEmail || !regPass}
+                  className="w-full h-12 rounded-2xl text-white font-bold text-sm mt-1 transition-opacity disabled:opacity-50"
+                  style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
+                >
+                  {regLoading ? "Submitting…" : "Create Account"}
+                </button>
+
+                <p className="text-center text-[11px] text-gray-400 leading-relaxed">
+                  Registration requests are reviewed by an admin before activation.
+                </p>
+              </form>
+            )}
+          </>
+        ) : (
+          /* ── Admin PIN Panel ── */
+          <div className="px-6 py-6 space-y-5">
+            <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
+              <button
+                onClick={() => { setShowAdmin(false); setAdminPin(""); setAdminError(""); }}
+                className="text-gray-400 hover:text-[#0f2557] transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <div>
+                <p className="font-black text-[#0f2557] text-sm">Admin Portal</p>
+                <p className="text-[11px] text-gray-400">Authorized personnel only</p>
               </div>
             </div>
-          )}
 
-          {/* ── MEMBER TAB ── */}
-          {tab === "member" && (
-            <div>
-              {/* ── PRIMARY: Phone + PIN ── */}
-              {memberMethod === "pin" && (
-                <div>
-                  <div className="px-6 pt-6 pb-3 text-center">
-                    <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-[#0f2557]/5 mb-3">
-                      <KeyRound className="w-5 h-5 text-[#0f2557]" />
-                    </div>
-                    <p className="font-bold text-[#0f2557] text-base">Member Sign In</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Enter your phone number and 4-digit PIN</p>
-                  </div>
-                  <div className="px-6 pb-6 space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Phone Number</label>
-                      <Input
-                        type="tel"
-                        placeholder="+256 700 000000"
-                        value={identifier}
-                        onChange={(e) => { setIdentifier(e.target.value); setPinError(""); }}
-                        disabled={pinLoading}
-                        autoFocus
-                        className="text-center rounded-xl border-[#0f2557]/15 focus-visible:ring-[#0f2557] h-11"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">4-Digit PIN</label>
-                      <PinInput
-                        length={4}
-                        value={memberPin}
-                        onChange={(v) => { setMemberPin(v); setPinError(""); }}
-                        onComplete={handlePinLogin}
-                        disabled={pinLoading || !identifier.trim()}
-                        error={!!pinError}
-                      />
-                    </div>
-
-                    {pinError && (
-                      <p className="text-sm text-destructive bg-destructive/8 px-3 py-2.5 rounded-xl text-center font-medium">{pinError}</p>
-                    )}
-
-                    <Button
-                      className="w-full h-11 rounded-xl bg-[#0f2557] hover:bg-[#1a3570] text-white font-semibold"
-                      disabled={pinLoading || memberPin.length < 4 || !identifier.trim()}
-                      onClick={() => handlePinLogin(memberPin)}
-                    >
-                      {pinLoading ? "Signing in…" : "Sign In"}
-                    </Button>
-
-                    <div className="text-center pt-1 border-t border-gray-50">
-                      <p className="text-xs text-muted-foreground mb-1">No PIN set yet?</p>
-                      <button
-                        className="text-sm text-[#c9a144] hover:text-[#0f2557] font-semibold transition-colors"
-                        onClick={() => { setMemberMethod("otp"); resetMemberState(); }}
-                      >
-                        Sign in with OTP instead →
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ── SECONDARY: OTP flow ── */}
-              {memberMethod === "otp" && otpStep === "phone" && (
-                <div>
-                  <div className="px-6 pt-5 pb-3 text-center relative">
-                    <button
-                      onClick={() => { setMemberMethod("pin"); resetMemberState(); }}
-                      className="absolute left-4 top-5 text-muted-foreground hover:text-[#0f2557] transition-colors"
-                    >
-                      <ArrowLeft className="w-5 h-5" />
-                    </button>
-                    <div className="inline-flex items-center justify-center w-9 h-9 rounded-2xl bg-[#0f2557]/5 mb-2">
-                      <Phone className="w-4 h-4 text-[#0f2557]" />
-                    </div>
-                    <p className="font-bold text-[#0f2557] text-sm">Sign in with OTP</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Enter your registered phone number</p>
-                  </div>
-                  <div className="px-6 pb-6">
-                    <form onSubmit={handleRequestOtp} className="space-y-4">
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Phone Number</label>
-                        <Input
-                          type="tel"
-                          placeholder="+256 700 000000"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          disabled={otpLoading}
-                          autoFocus
-                          className="text-center rounded-xl border-[#0f2557]/15 focus-visible:ring-[#0f2557] h-11"
-                        />
-                      </div>
-                      {otpError && <p className="text-sm text-destructive bg-destructive/8 px-3 py-2.5 rounded-xl text-center font-medium">{otpError}</p>}
-                      <Button
-                        type="submit"
-                        className="w-full h-11 rounded-xl bg-[#0f2557] hover:bg-[#1a3570] text-white font-semibold"
-                        disabled={otpLoading || !phone.trim()}
-                      >
-                        {otpLoading ? "Sending…" : "Send Code"}
-                      </Button>
-                    </form>
-                  </div>
-                </div>
-              )}
-
-              {memberMethod === "otp" && otpStep === "code" && (
-                <div>
-                  <div className="px-6 pt-5 pb-3 text-center relative">
-                    <button
-                      onClick={() => { setOtpStep("phone"); setOtp(""); setDevCode(""); setOtpError(""); }}
-                      className="absolute left-4 top-5 text-muted-foreground hover:text-[#0f2557] transition-colors"
-                    >
-                      <ArrowLeft className="w-5 h-5" />
-                    </button>
-                    <div className="inline-flex items-center justify-center w-9 h-9 rounded-2xl bg-[#0f2557]/5 mb-2">
-                      <Lock className="w-4 h-4 text-[#0f2557]" />
-                    </div>
-                    <p className="font-bold text-[#0f2557] text-sm">Enter verification code</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Sent to <span className="font-semibold text-[#0f2557]">{phone}</span>
-                    </p>
-                  </div>
-                  <div className="px-6 pb-6 space-y-4">
-                    {devCode && (
-                      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-center">
-                        <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider mb-1">Test mode — your code</p>
-                        <p className="text-2xl font-black tracking-[0.3em] text-amber-700">{devCode}</p>
-                      </div>
-                    )}
-                    <PinInput
-                      length={6}
-                      value={otp}
-                      onChange={setOtp}
-                      onComplete={handleVerifyOtp}
-                      disabled={otpLoading}
-                      autoFocus
-                    />
-                    {otpError && <p className="text-sm text-destructive bg-destructive/8 px-3 py-2.5 rounded-xl text-center font-medium">{otpError}</p>}
-                    <Button
-                      className="w-full h-11 rounded-xl bg-[#0f2557] hover:bg-[#1a3570] text-white font-semibold"
-                      disabled={otpLoading || otp.length < 6}
-                      onClick={() => handleVerifyOtp(otp)}
-                    >
-                      {otpLoading ? "Verifying…" : "Sign In"}
-                    </Button>
-                    <button
-                      type="button"
-                      onClick={handleRequestOtp as any}
-                      className="w-full text-sm text-[#c9a144] hover:text-[#0f2557] font-semibold transition-colors"
-                      disabled={otpLoading}
-                    >
-                      Resend code
-                    </button>
-                  </div>
-                </div>
-              )}
+            <div className="text-center pb-1">
+              <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-[#0f2557]/6 mb-3">
+                <Lock className="w-5 h-5 text-[#0f2557]" />
+              </div>
+              <p className="font-bold text-[#0f2557]">Enter your PIN</p>
+              <p className="text-xs text-gray-400 mt-0.5">4-digit admin PIN</p>
             </div>
-          )}
+
+            <div>
+              <FieldLabel>Username</FieldLabel>
+              <Input
+                type="text"
+                autoComplete="username"
+                value={adminUsername}
+                onChange={(e) => setAdminUsername(e.target.value)}
+                disabled={adminLoading}
+                className="text-center rounded-2xl border-gray-200 focus-visible:ring-[#0f2557] h-12"
+              />
+            </div>
+
+            <PinInput
+              length={4}
+              value={adminPin}
+              onChange={(v) => { setAdminPin(v); setAdminError(""); }}
+              onComplete={handleAdminPin}
+              disabled={adminLoading}
+              autoFocus
+              error={!!adminError}
+            />
+
+            {adminError && (
+              <p className="text-sm text-red-500 bg-red-50 px-3 py-2.5 rounded-xl text-center font-medium">
+                {adminError}
+              </p>
+            )}
+
+            <Button
+              type="button"
+              onClick={() => { if (adminPin.length === 4) handleAdminPin(adminPin); }}
+              disabled={adminLoading || adminPin.length < 4}
+              className="w-full h-12 rounded-2xl bg-[#0f2557] hover:bg-[#1a3570] text-white font-bold"
+            >
+              {adminLoading ? "Signing in…" : "Sign In"}
+            </Button>
+
+            <div className="text-center">
+              <Link href="/forgot-pin" className="text-sm text-[#B03060] hover:text-[#8B1A40] font-semibold">
+                Forgot PIN?
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="mt-6 flex items-center gap-5">
+        <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+          <ShieldCheck className="h-3.5 w-3.5 text-[#c9a144]" />
+          <span>Secured &amp; Encrypted</span>
         </div>
 
-        {/* Trust footer */}
-        <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground mt-6 mb-8">
-          <ShieldCheck className="w-3.5 h-3.5 text-[#c9a144]" />
-          <span>Bash M. Money And Financial Services Ltd - Secured &amp; Encrypted</span>
-        </div>
+        {!showAdmin && (
+          <button
+            onClick={() => setShowAdmin(true)}
+            className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-[#0f2557] transition-colors"
+          >
+            <Shield className="h-3.5 w-3.5" />
+            <span>Admin Login</span>
+          </button>
+        )}
       </div>
     </div>
   );
