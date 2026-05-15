@@ -10,12 +10,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PinInput } from "@/components/pin-input";
 import { MemberAvatar } from "@/components/member-avatar";
+import { BmmLogo } from "@/components/bmm-logo";
 import { toast } from "sonner";
+import {
+  Dialog, DialogContent, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Wallet, Landmark, LogOut, FileDown, TrendingUp, TrendingDown,
   User, Phone, CreditCard, Calendar, RefreshCw, Bell, BellOff,
-  CheckCheck, ArrowUpCircle, ArrowDownCircle, ShieldCheck, Hash,
-  KeyRound, CheckCircle2,
+  CheckCheck, ArrowUpCircle, ArrowDownCircle, Hash,
+  KeyRound, CheckCircle2, AlertCircle,
 } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -33,41 +37,40 @@ interface Notification {
 
 export function MemberPortal() {
   const [, navigate] = useLocation();
-  const [memberId, setMemberId] = useState<number | null>(null);
+  const [memberId, setMemberId]     = useState<number | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
-  const [activeTab, setActiveTab] = useState<"ledger" | "notifications" | "profile">("ledger");
+  const [activeTab, setActiveTab]   = useState<"ledger" | "notifications" | "profile">("ledger");
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount, setUnreadCount]     = useState(0);
   const [notifsLoading, setNotifsLoading] = useState(false);
 
+  // Logout confirmation
+  const [showLogout, setShowLogout]   = useState(false);
+  const [loggingOut, setLoggingOut]   = useState(false);
+
   // Change PIN state
-  const [cpCurrent, setCpCurrent] = useState("");
-  const [cpNew, setCpNew] = useState("");
-  const [cpConfirm, setCpConfirm] = useState("");
-  const [cpLoading, setCpLoading] = useState(false);
-  const [cpError, setCpError] = useState("");
+  const [cpCurrent, setCpCurrent]     = useState("");
+  const [cpNew, setCpNew]             = useState("");
+  const [cpConfirm, setCpConfirm]     = useState("");
+  const [cpLoading, setCpLoading]     = useState(false);
+  const [cpError, setCpError]         = useState("");
   const [cpCurrentErr, setCpCurrentErr] = useState(false);
-  const [cpSuccess, setCpSuccess] = useState(false);
+  const [cpSuccess, setCpSuccess]     = useState(false);
 
   useEffect(() => {
     fetch(`${BASE}/api/auth/member/me`, { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (data?.memberId) {
-          setMemberId(data.memberId);
-        } else {
-          navigate("/login");
-        }
+        if (data?.memberId) setMemberId(data.memberId);
+        else navigate("/login");
       })
       .catch(() => navigate("/login"))
       .finally(() => setAuthLoading(false));
   }, []);
 
   const fetchUnreadCount = useCallback(async () => {
-    const r = await fetch(`${BASE}/api/member/notifications/unread-count`, {
-      credentials: "same-origin",
-    });
+    const r = await fetch(`${BASE}/api/member/notifications/unread-count`, { credentials: "same-origin" });
     if (r.ok) {
       const d = await r.json();
       setUnreadCount(d.count ?? 0);
@@ -76,9 +79,7 @@ export function MemberPortal() {
 
   const fetchNotifications = useCallback(async () => {
     setNotifsLoading(true);
-    const r = await fetch(`${BASE}/api/member/notifications`, {
-      credentials: "same-origin",
-    });
+    const r = await fetch(`${BASE}/api/member/notifications`, { credentials: "same-origin" });
     if (r.ok) {
       const data = await r.json();
       setNotifications(data);
@@ -89,8 +90,7 @@ export function MemberPortal() {
 
   const markAllRead = async () => {
     await fetch(`${BASE}/api/member/notifications/read-all`, {
-      method: "PATCH",
-      credentials: "same-origin",
+      method: "PATCH", credentials: "same-origin",
     });
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnreadCount(0);
@@ -104,9 +104,7 @@ export function MemberPortal() {
   }, [memberId, fetchUnreadCount]);
 
   useEffect(() => {
-    if (activeTab === "notifications" && memberId) {
-      fetchNotifications();
-    }
+    if (activeTab === "notifications" && memberId) fetchNotifications();
   }, [activeTab, memberId, fetchNotifications]);
 
   const { data: profile, isLoading: profileLoading } = useGetMember(memberId ?? 0, {
@@ -117,12 +115,17 @@ export function MemberPortal() {
     query: { enabled: !!memberId, queryKey: getGetMemberLedgerQueryKey(memberId ?? 0) },
   });
 
-  const handleLogout = async () => {
-    await fetch(`${BASE}/api/auth/member/logout`, {
-      method: "POST",
-      credentials: "same-origin",
-    });
-    navigate("/login");
+  const handleLogoutConfirmed = async () => {
+    setLoggingOut(true);
+    try {
+      await fetch(`${BASE}/api/auth/member/logout`, {
+        method: "POST", credentials: "same-origin",
+      });
+      navigate("/login");
+    } finally {
+      setLoggingOut(false);
+      setShowLogout(false);
+    }
   };
 
   const handleExportPDF = async () => {
@@ -139,8 +142,7 @@ export function MemberPortal() {
   };
 
   const handleChangePin = async () => {
-    setCpError("");
-    setCpCurrentErr(false);
+    setCpError(""); setCpCurrentErr(false);
     if (cpNew.length < 4) { setCpError("New PIN must be 4 digits"); return; }
     if (cpNew !== cpConfirm) { setCpError("New PIN and confirmation do not match"); return; }
     setCpLoading(true);
@@ -153,9 +155,7 @@ export function MemberPortal() {
       });
       const data = await res.json();
       if (!res.ok) {
-        if (data.error?.toLowerCase().includes("current")) {
-          setCpCurrentErr(true);
-        }
+        if (data.error?.toLowerCase().includes("current")) setCpCurrentErr(true);
         setCpError(data.error ?? "Failed to change PIN");
       } else {
         setCpSuccess(true);
@@ -171,9 +171,10 @@ export function MemberPortal() {
 
   if (authLoading || profileLoading) {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-[#f4f6fb]">
+      <div className="min-h-[100dvh] flex items-center justify-center"
+        style={{ background: "linear-gradient(160deg, #f7f5f2 0%, #eef1f8 50%, #f0edf6 100%)" }}>
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <RefreshCw className="w-6 h-6 animate-spin text-[#0f2557]" />
+          <RefreshCw className="w-6 h-6 animate-spin text-[#B03060]" />
           <p className="text-sm">Loading your account…</p>
         </div>
       </div>
@@ -183,56 +184,65 @@ export function MemberPortal() {
   if (!profile) return null;
 
   const tabs = [
-    { key: "ledger" as const, label: "Transactions" },
-    { key: "notifications" as const, label: "Alerts", badge: unreadCount },
-    { key: "profile" as const, label: "Profile" },
+    { key: "ledger"        as const, label: "Transactions" },
+    { key: "notifications" as const, label: "Alerts",  badge: unreadCount },
+    { key: "profile"       as const, label: "Profile"  },
   ];
 
   return (
-    <div className="min-h-[100dvh] bg-[#f4f6fb] flex flex-col max-w-lg mx-auto">
+    <div className="min-h-[100dvh] flex flex-col max-w-lg mx-auto"
+      style={{ background: "linear-gradient(160deg, #f7f5f2 0%, #eef1f8 50%, #f0edf6 100%)" }}>
 
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-30 bg-[#0f2557] px-4 h-14 flex items-center justify-between shadow-md">
-        <div className="flex items-center gap-2.5">
-          <div className="bg-[#c9a144] text-[#0f2557] px-2 py-1 rounded-lg">
-            <span className="font-black text-xs tracking-tight">BMM</span>
-          </div>
-          <span className="font-black text-sm tracking-tight text-white">My Account</span>
-        </div>
-        <div className="flex items-center gap-3">
-          {unreadCount > 0 && (
+      {/* ── Header — white, logo top-left, burgundy stripe ── */}
+      <header
+        className="sticky top-0 z-30 bg-white border-b border-gray-100"
+        style={{ boxShadow: "0 2px 12px rgba(15,37,87,0.07)" }}
+      >
+        <div className="flex items-center justify-between px-4 h-[64px]">
+          {/* Logo */}
+          <BmmLogo size="md" />
+
+          <div className="flex items-center gap-2">
+            {/* Notification bell */}
+            {unreadCount > 0 && (
+              <button
+                onClick={() => setActiveTab("notifications")}
+                className="relative text-gray-500 hover:text-[#B03060] transition-colors p-1.5"
+              >
+                <Bell className="w-4.5 h-4.5" />
+                <span className="absolute -top-0.5 -right-0.5 bg-[#B03060] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              </button>
+            )}
+
+            {/* Sign out → confirmation modal */}
             <button
-              onClick={() => setActiveTab("notifications")}
-              className="relative text-white/70 hover:text-white transition-colors"
+              onClick={() => setShowLogout(true)}
+              className="flex items-center gap-1.5 text-gray-400 hover:text-[#B03060] hover:bg-[#B03060]/5 px-2.5 py-1.5 rounded-lg transition-colors text-xs font-semibold"
             >
-              <Bell className="w-4 h-4" />
-              <span className="absolute -top-1.5 -right-1.5 bg-destructive text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sign out</span>
             </button>
-          )}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 text-xs text-white/70 hover:text-white transition-colors"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Sign out
-          </button>
+          </div>
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-5 space-y-4 pb-24">
+      <main className="flex-1 px-4 py-5 space-y-4 pb-10">
 
         {/* ── Welcome banner ── */}
-        <div className="bg-white rounded-2xl px-4 py-4 flex items-center gap-3 shadow-sm border border-gray-100">
+        <div
+          className="bg-white rounded-2xl px-4 py-4 flex items-center gap-3 border border-gray-100"
+          style={{ boxShadow: "0 2px 12px rgba(15,37,87,0.06)" }}
+        >
           <MemberAvatar
             name={profile.name}
             photoUrl={(profile as any).profilePictureUrl}
             size="lg"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground">Welcome back</p>
-            <h1 className="text-base font-black text-[#0f2557] leading-tight truncate">{profile.name}</h1>
+            <p className="text-xs text-gray-500 font-medium">Welcome back</p>
+            <h1 className="text-base font-black text-[#1A1A1A] leading-tight truncate">{profile.name}</h1>
             {(profile as any).accountNumber && (
               <p className="text-[10px] font-mono text-[#c9a144] font-bold mt-0.5 flex items-center gap-0.5">
                 <Hash className="w-2.5 h-2.5" />{(profile as any).accountNumber}
@@ -243,44 +253,58 @@ export function MemberPortal() {
 
         {/* ── Balance Cards ── */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-2xl p-4 border border-[#0f2557]/10 shadow-sm">
-            <div className="flex items-center gap-1.5 text-[#0f2557] mb-1.5">
-              <Wallet className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-bold uppercase tracking-wider">Total Savings</span>
+          {/* Total Savings — burgundy accent */}
+          <div
+            className="bg-white rounded-2xl p-4 border-2 border-[#B03060]/20"
+            style={{ boxShadow: "0 2px 12px rgba(176,48,96,0.07)" }}
+          >
+            <div className="flex items-center gap-1.5 mb-2">
+              <div className="w-6 h-6 rounded-lg bg-[#B03060]/8 flex items-center justify-center">
+                <Wallet className="h-3 w-3 text-[#B03060]" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#B03060]">Total Savings</span>
             </div>
-            <span className="text-lg font-black text-[#0f2557]">
+            <span className="text-lg font-black text-[#1A1A1A] leading-tight block">
               {formatCurrency(profile.totalSavings)}
             </span>
           </div>
-          <div className="bg-white rounded-2xl p-4 border border-destructive/10 shadow-sm">
-            <div className="flex items-center gap-1.5 text-destructive mb-1.5">
-              <Landmark className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-bold uppercase tracking-wider">Loan Balance</span>
+
+          {/* Loan Balance — red accent */}
+          <div
+            className="bg-white rounded-2xl p-4 border-2 border-red-200"
+            style={{ boxShadow: "0 2px 12px rgba(220,38,38,0.06)" }}
+          >
+            <div className="flex items-center gap-1.5 mb-2">
+              <div className="w-6 h-6 rounded-lg bg-red-50 flex items-center justify-center">
+                <Landmark className="h-3 w-3 text-red-500" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-red-500">Loan Balance</span>
             </div>
-            <span className="text-lg font-black text-destructive">
+            <span className="text-lg font-black text-red-500 leading-tight block">
               {formatCurrency(profile.outstandingLoan)}
             </span>
           </div>
         </div>
 
-        {/* ── Net Balance ── */}
-        <div className="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-[#c9a144]/20 shadow-sm"
-          style={{ boxShadow: "0 2px 12px rgba(15,37,87,0.08)" }}
+        {/* ── Net Balance — white card, burgundy total ── */}
+        <div
+          className="bg-white rounded-2xl px-4 py-4 border border-[#B03060]/15 flex items-center justify-between"
+          style={{ boxShadow: "0 2px 12px rgba(176,48,96,0.08)" }}
         >
           <div>
-            <p className="text-xs text-muted-foreground font-medium">Net Balance</p>
-            <p className={`text-xl font-black ${profile.currentBalance >= 0 ? "text-[#0f2557]" : "text-destructive"}`}>
+            <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wider mb-0.5">Net Balance</p>
+            <p className={`text-2xl font-black leading-tight ${profile.currentBalance >= 0 ? "text-[#B03060]" : "text-red-500"}`}>
               {formatCurrency(profile.currentBalance)}
             </p>
           </div>
-          <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground">
+          <div className="flex flex-col items-end gap-1.5 text-xs">
             {ledger && (
               <>
-                <span className="flex items-center gap-1 text-emerald-600 font-semibold">
+                <span className="flex items-center gap-1 text-emerald-600 font-bold">
                   <TrendingUp className="w-3 h-3" />
                   +{formatCurrency(ledger.totalCredits)}
                 </span>
-                <span className="flex items-center gap-1 text-destructive font-semibold">
+                <span className="flex items-center gap-1 text-red-500 font-bold">
                   <TrendingDown className="w-3 h-3" />
                   -{formatCurrency(ledger.totalDebits)}
                 </span>
@@ -289,21 +313,25 @@ export function MemberPortal() {
           </div>
         </div>
 
-        {/* ── Tabs ── */}
-        <div className="flex gap-1 bg-white rounded-xl p-1 border border-gray-100 shadow-sm">
+        {/* ── Tabs — burgundy active ── */}
+        <div className="flex gap-1 bg-white rounded-xl p-1 border border-gray-100"
+          style={{ boxShadow: "0 2px 8px rgba(15,37,87,0.05)" }}>
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`relative flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+              className={`relative flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${
                 activeTab === tab.key
-                  ? "bg-[#0f2557] text-white shadow-sm"
-                  : "text-muted-foreground hover:text-[#0f2557]"
+                  ? "text-white shadow-sm"
+                  : "text-gray-500 hover:text-[#1A1A1A]"
               }`}
+              style={activeTab === tab.key
+                ? { background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }
+                : {}}
             >
               {tab.label}
               {tab.badge != null && tab.badge > 0 && (
-                <span className="absolute -top-1 -right-1 bg-destructive text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-[#B03060] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {tab.badge > 9 ? "9+" : tab.badge}
                 </span>
               )}
@@ -314,59 +342,72 @@ export function MemberPortal() {
         {/* ── TRANSACTIONS TAB ── */}
         {activeTab === "ledger" && (
           <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <h2 className="font-bold text-sm text-[#0f2557]">Transaction History</h2>
-              <Button
-                size="sm"
-                variant="outline"
+            <div className="flex justify-between items-center px-1">
+              <h2 className="font-black text-sm text-[#1A1A1A]">Transaction History</h2>
+              <button
                 onClick={handleExportPDF}
                 disabled={isExporting || ledgerLoading || !ledger}
-                className="gap-1.5 h-8 text-xs rounded-xl border-[#0f2557]/20 text-[#0f2557]"
+                className="flex items-center gap-1.5 h-8 px-3 text-xs font-bold rounded-xl text-white transition-all disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
               >
                 <FileDown className="h-3.5 w-3.5" />
-                {isExporting ? "Exporting..." : "Export PDF"}
-              </Button>
+                {isExporting ? "Exporting…" : "Export PDF"}
+              </button>
             </div>
-            <Card className="rounded-2xl border-gray-100 shadow-sm">
-              <div className="divide-y divide-gray-50">
-                {ledgerLoading ? (
-                  <div className="p-6 text-center text-sm text-muted-foreground">
-                    <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2 text-[#0f2557]" />
-                    Loading…
-                  </div>
-                ) : !ledger?.entries.length ? (
-                  <div className="p-8 text-center text-muted-foreground text-sm">No transactions yet</div>
-                ) : (
-                  [...(ledger.entries ?? [])].reverse().map((entry) => (
-                    <div key={entry.id} className="p-4 text-sm">
-                      <div className="flex justify-between items-start mb-1">
-                        <div className="font-semibold text-[#0f2557]">{formatTransactionType(entry.type)}</div>
-                        <div className={`font-black ${entry.direction === "credit" ? "text-emerald-600" : "text-destructive"}`}>
-                          {entry.direction === "credit" ? "+" : "-"}{formatCurrency(entry.amount)}
+
+            <div
+              className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
+              style={{ boxShadow: "0 2px 12px rgba(15,37,87,0.06)" }}
+            >
+              {ledgerLoading ? (
+                <div className="p-8 text-center text-sm text-gray-400">
+                  <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2 text-[#B03060]" />
+                  Loading…
+                </div>
+              ) : !ledger?.entries.length ? (
+                <div className="p-8 text-center text-gray-400 text-sm">No transactions yet</div>
+              ) : (
+                [...(ledger.entries ?? [])].reverse().map((entry, i) => (
+                  <div
+                    key={entry.id}
+                    className={`px-4 py-3.5 border-b last:border-0 border-gray-50 ${i % 2 !== 0 ? "bg-gray-50/40" : ""}`}
+                  >
+                    <div className="flex justify-between items-start mb-1">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                          entry.direction === "credit" ? "bg-emerald-50" : "bg-red-50"
+                        }`}>
+                          {entry.direction === "credit"
+                            ? <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                            : <TrendingDown className="w-3.5 h-3.5 text-red-500" />}
                         </div>
+                        <span className="font-bold text-[#1A1A1A] text-sm">{formatTransactionType(entry.type)}</span>
                       </div>
-                      <div className="flex justify-between items-center text-xs text-muted-foreground">
-                        <span>{formatDate(entry.createdAt)}</span>
-                        <span>Bal: <span className={`font-semibold ${entry.runningBalance >= 0 ? "text-[#0f2557]" : "text-destructive"}`}>{formatCurrency(entry.runningBalance)}</span></span>
-                      </div>
-                      {entry.notes && (
-                        <div className="mt-1.5 text-xs text-muted-foreground bg-muted px-2 py-1.5 rounded-lg">{entry.notes}</div>
-                      )}
+                      <span className={`font-black text-sm ${entry.direction === "credit" ? "text-emerald-600" : "text-red-500"}`}>
+                        {entry.direction === "credit" ? "+" : "-"}{formatCurrency(entry.amount)}
+                      </span>
                     </div>
-                  ))
-                )}
-              </div>
-            </Card>
+                    <div className="flex justify-between items-center text-xs text-gray-500 pl-9">
+                      <span>{formatDate(entry.createdAt)}</span>
+                      <span>Bal: <span className={`font-black ${entry.runningBalance >= 0 ? "text-[#1A1A1A]" : "text-red-500"}`}>{formatCurrency(entry.runningBalance)}</span></span>
+                    </div>
+                    {entry.notes && (
+                      <div className="mt-2 pl-9 text-xs text-gray-500 bg-gray-50 px-2 py-1.5 rounded-lg">{entry.notes}</div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         )}
 
         {/* ── NOTIFICATIONS TAB ── */}
         {activeTab === "notifications" && (
           <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <h2 className="font-bold text-sm text-[#0f2557]">Account Alerts</h2>
+            <div className="flex justify-between items-center px-1">
+              <h2 className="font-black text-sm text-[#1A1A1A]">Account Alerts</h2>
               {unreadCount > 0 && (
-                <button onClick={markAllRead} className="flex items-center gap-1 text-xs text-[#0f2557] hover:underline font-semibold">
+                <button onClick={markAllRead} className="flex items-center gap-1 text-xs text-[#B03060] hover:underline font-bold">
                   <CheckCheck className="w-3.5 h-3.5" />
                   Mark all read
                 </button>
@@ -374,41 +415,54 @@ export function MemberPortal() {
             </div>
 
             {notifsLoading ? (
-              <div className="p-6 text-center text-sm text-muted-foreground">
-                <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2" />
+              <div className="p-8 text-center text-sm text-gray-400">
+                <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2 text-[#B03060]" />
                 Loading alerts…
               </div>
             ) : notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground bg-white rounded-2xl border border-gray-100">
+              <div
+                className="flex flex-col items-center justify-center py-12 gap-3 text-gray-400 bg-white rounded-2xl border border-gray-100"
+                style={{ boxShadow: "0 2px 12px rgba(15,37,87,0.06)" }}
+              >
                 <BellOff className="w-8 h-8 opacity-40" />
-                <p className="text-sm font-medium">No alerts yet</p>
-                <p className="text-xs text-center max-w-[200px]">You'll be notified here whenever a transaction is posted to your account</p>
+                <p className="text-sm font-medium text-[#1A1A1A]">No alerts yet</p>
+                <p className="text-xs text-center max-w-[200px] text-gray-500">
+                  You'll be notified here whenever a transaction is posted to your account
+                </p>
               </div>
             ) : (
               <div className="space-y-2">
                 {notifications.map((n) => (
                   <div
                     key={n.id}
-                    className={`rounded-xl border p-4 transition-colors ${
+                    className={`rounded-2xl border p-4 transition-colors ${
                       n.read ? "bg-white border-gray-100" : n.direction === "credit" ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"
                     }`}
+                    style={{ boxShadow: "0 1px 6px rgba(15,37,87,0.04)" }}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`mt-0.5 flex-shrink-0 rounded-full p-1.5 ${n.direction === "credit" ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-500"}`}>
-                        {n.direction === "credit" ? <ArrowUpCircle className="w-4 h-4" /> : <ArrowDownCircle className="w-4 h-4" />}
+                      <div className={`mt-0.5 flex-shrink-0 rounded-xl p-1.5 ${
+                        n.direction === "credit" ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-500"
+                      }`}>
+                        {n.direction === "credit"
+                          ? <ArrowUpCircle className="w-4 h-4" />
+                          : <ArrowDownCircle className="w-4 h-4" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start gap-2 mb-1">
-                          <span className="text-sm font-semibold text-[#0f2557]">{formatTransactionType(n.type)}</span>
-                          <span className={`text-sm font-black flex-shrink-0 ${n.direction === "credit" ? "text-emerald-600" : "text-destructive"}`}>
+                          <span className="text-sm font-bold text-[#1A1A1A]">{formatTransactionType(n.type)}</span>
+                          <span className={`text-sm font-black flex-shrink-0 ${n.direction === "credit" ? "text-emerald-600" : "text-red-500"}`}>
                             {n.direction === "credit" ? "+" : "-"}{formatCurrency(n.amount)}
                           </span>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">{n.message}</p>
+                        <p className="text-xs text-gray-500 leading-relaxed">{n.message}</p>
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-[10px] text-muted-foreground">{formatDate(n.createdAt)}</span>
+                          <span className="text-[10px] text-gray-400">{formatDate(n.createdAt)}</span>
                           {!n.read && (
-                            <span className="text-[9px] bg-[#0f2557] text-white px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-wider">New</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider text-white"
+                              style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}>
+                              New
+                            </span>
                           )}
                         </div>
                       </div>
@@ -424,8 +478,11 @@ export function MemberPortal() {
         {activeTab === "profile" && (
           <div className="space-y-3">
             {/* Profile card */}
-            <Card className="rounded-2xl border-gray-100 shadow-sm">
-              <CardContent className="p-4 space-y-4">
+            <div
+              className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
+              style={{ boxShadow: "0 2px 12px rgba(15,37,87,0.06)" }}
+            >
+              <div className="p-4 space-y-4">
                 <div className="flex items-center gap-3 pb-3 border-b border-gray-50">
                   <MemberAvatar
                     name={profile.name}
@@ -433,42 +490,45 @@ export function MemberPortal() {
                     size="lg"
                   />
                   <div>
-                    <p className="font-black text-[#0f2557]">{profile.name}</p>
-                    <p className="text-xs text-muted-foreground">Member</p>
+                    <p className="font-black text-[#1A1A1A]">{profile.name}</p>
+                    <p className="text-xs text-gray-500">Member Account</p>
                   </div>
                 </div>
                 <div className="space-y-3">
                   {[
-                    { icon: User,       label: "Full Name",     value: profile.name },
-                    { icon: Phone,      label: "Phone Number",  value: profile.phone },
-                    { icon: Hash,       label: "Account No.",   value: (profile as any).accountNumber ?? "—", mono: true },
-                    { icon: CreditCard, label: "Member ID",     value: profile.idNumber },
-                    { icon: Calendar,   label: "Member Since",  value: formatDate(profile.joinDate) },
+                    { icon: User,       label: "Full Name",    value: profile.name },
+                    { icon: Phone,      label: "Phone Number", value: profile.phone },
+                    { icon: Hash,       label: "Account No.",  value: (profile as any).accountNumber ?? "—", mono: true },
+                    { icon: CreditCard, label: "Member ID",    value: profile.idNumber },
+                    { icon: Calendar,   label: "Member Since", value: formatDate(profile.joinDate) },
                   ].map(({ icon: Icon, label, value, mono }) => (
                     <div key={label} className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#0f2557]/5 flex items-center justify-center flex-shrink-0">
-                        <Icon className="w-3.5 h-3.5 text-[#0f2557]" />
+                      <div className="w-8 h-8 rounded-xl bg-[#B03060]/8 flex items-center justify-center flex-shrink-0">
+                        <Icon className="w-3.5 h-3.5 text-[#B03060]" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{label}</p>
-                        <p className={`text-sm text-[#0f2557] truncate ${mono ? "font-mono font-black" : "font-semibold"}`}>{value}</p>
+                        <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">{label}</p>
+                        <p className={`text-sm text-[#1A1A1A] truncate ${mono ? "font-mono font-black" : "font-semibold"}`}>{value}</p>
                       </div>
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Change PIN card */}
-            <Card className="rounded-2xl border-[#c9a144]/20 shadow-sm">
-              <CardContent className="p-4 space-y-4">
+            <div
+              className="bg-white rounded-2xl border border-[#B03060]/15 overflow-hidden"
+              style={{ boxShadow: "0 2px 12px rgba(176,48,96,0.06)" }}
+            >
+              <div className="p-4 space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b border-gray-50">
-                  <div className="w-7 h-7 rounded-lg bg-[#c9a144]/10 flex items-center justify-center flex-shrink-0">
-                    <KeyRound className="w-3.5 h-3.5 text-[#c9a144]" />
+                  <div className="w-7 h-7 rounded-xl bg-[#B03060]/8 flex items-center justify-center flex-shrink-0">
+                    <KeyRound className="w-3.5 h-3.5 text-[#B03060]" />
                   </div>
                   <div>
-                    <p className="font-bold text-[#0f2557] text-sm">Security — Change PIN</p>
-                    <p className="text-[10px] text-muted-foreground">Update your 4-digit login PIN</p>
+                    <p className="font-bold text-[#1A1A1A] text-sm">Security — Change PIN</p>
+                    <p className="text-[10px] text-gray-500">Update your 4-digit login PIN</p>
                   </div>
                 </div>
 
@@ -476,12 +536,12 @@ export function MemberPortal() {
                   <div className="flex flex-col items-center gap-2 py-4">
                     <CheckCircle2 className="w-10 h-10 text-emerald-500" />
                     <p className="text-sm font-bold text-emerald-700">PIN changed successfully!</p>
-                    <p className="text-xs text-muted-foreground text-center">Use your new PIN next time you sign in.</p>
+                    <p className="text-xs text-gray-500 text-center">Use your new PIN next time you sign in.</p>
                   </div>
                 ) : (
                   <>
                     <div className="space-y-1.5">
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                         Current PIN <span className="normal-case font-normal">(leave blank if setting for the first time)</span>
                       </p>
                       <PinInput
@@ -492,9 +552,8 @@ export function MemberPortal() {
                         error={cpCurrentErr}
                       />
                     </div>
-
                     <div className="space-y-1.5">
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">New PIN</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">New PIN</p>
                       <PinInput
                         length={4}
                         value={cpNew}
@@ -502,9 +561,8 @@ export function MemberPortal() {
                         disabled={cpLoading}
                       />
                     </div>
-
                     <div className="space-y-1.5">
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Confirm New PIN</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Confirm New PIN</p>
                       <PinInput
                         length={4}
                         value={cpConfirm}
@@ -515,27 +573,72 @@ export function MemberPortal() {
                     </div>
 
                     {cpError && (
-                      <p className="text-xs text-destructive bg-destructive/8 px-3 py-2 rounded-xl text-center font-medium">{cpError}</p>
+                      <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-xl text-center font-medium">{cpError}</p>
                     )}
 
-                    <Button
-                      className="w-full h-10 rounded-xl bg-[#0f2557] hover:bg-[#1a3570] text-white font-semibold text-sm"
+                    <button
+                      className="w-full h-10 rounded-xl text-white font-semibold text-sm transition-all disabled:opacity-50"
+                      style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
                       onClick={handleChangePin}
                       disabled={cpLoading || cpNew.length < 4 || cpConfirm.length < 4}
                     >
                       {cpLoading ? (
-                        <span className="flex items-center gap-2">
+                        <span className="flex items-center justify-center gap-2">
                           <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving…
                         </span>
                       ) : "Change PIN"}
-                    </Button>
+                    </button>
                   </>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         )}
       </main>
+
+      {/* ── Logout confirmation modal ── */}
+      <Dialog open={showLogout} onOpenChange={(open) => !loggingOut && setShowLogout(open)}>
+        <DialogContent
+          className="rounded-3xl border-0 p-0 overflow-hidden max-w-[320px] mx-auto"
+          style={{ boxShadow: "0 24px 64px rgba(15,37,87,0.18)" }}
+        >
+          <div className="px-6 pt-7 pb-5 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-[#B03060]/8 flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-7 h-7 text-[#B03060]" />
+            </div>
+            <DialogTitle className="text-[#1A1A1A] font-black text-lg leading-tight">
+              Sign out?
+            </DialogTitle>
+            <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+              Are you sure you want to log out of your account?
+            </p>
+          </div>
+
+          <DialogFooter className="flex-col gap-2.5 px-6 pb-7">
+            <Button
+              variant="outline"
+              className="w-full h-11 rounded-2xl border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50"
+              onClick={() => setShowLogout(false)}
+              disabled={loggingOut}
+            >
+              Stay Logged In
+            </Button>
+            <button
+              onClick={handleLogoutConfirmed}
+              disabled={loggingOut}
+              className="w-full h-11 rounded-2xl text-white font-bold text-sm transition-all disabled:opacity-60 cursor-pointer"
+              style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
+            >
+              {loggingOut ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  Signing out…
+                </span>
+              ) : "Yes, Log Out"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
