@@ -4,15 +4,15 @@
  * Bump CACHE_VERSION whenever you deploy a new build.
  */
 
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v3";
 const CACHE_NAME = `bmmfs-${CACHE_VERSION}`;
 
 /** Assets pre-cached on SW install so the app shell loads instantly offline. */
 const PRECACHE_URLS = [
   "/",
   "/index.html",
-  "/bmm-logo-transparent.png",
-  "/bmm-logo-original.jpeg",
+  "/logo.png",
+  "/logo-white.png",
   "/manifest.webmanifest",
   "/icons/icon-192x192.png",
   "/icons/icon-512x512.png",
@@ -28,7 +28,7 @@ self.addEventListener("install", (event) => {
   );
 });
 
-// ── Activate: purge old caches ────────────────────────────────────────────────
+// ── Activate: purge ALL old caches immediately ────────────────────────────────
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
@@ -67,13 +67,26 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // HTML navigation → Network-first so new deployments are always picked up
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          return response;
+        })
+        .catch(() => caches.match(request)),
+    );
+    return;
+  }
+
   // Static assets (JS, CSS, images, fonts) → Cache-first
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
 
       return fetch(request).then((response) => {
-        // Only cache valid responses
         if (!response || response.status !== 200 || response.type === "opaque") {
           return response;
         }
