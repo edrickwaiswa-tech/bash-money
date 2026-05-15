@@ -34,7 +34,7 @@ paths:
     get:
       operationId: listMembers
       tags: [members]
-      summary: List all members
+      summary: List all members with computed balances
       parameters:
         - name: search
           in: query
@@ -43,13 +43,13 @@ paths:
             type: string
       responses:
         "200":
-          description: List of members
+          description: List of members with balance summary
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Member"
+                  $ref: "#/components/schemas/MemberProfile"
     post:
       operationId: createMember
       tags: [members]

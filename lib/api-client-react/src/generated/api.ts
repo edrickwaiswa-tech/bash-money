@@ -119,7 +119,7 @@ export function useHealthCheck<
 }
 
 /**
- * @summary List all members
+ * @summary List all members with computed balances
  */
 export const getListMembersUrl = (params?: ListMembersParams) => {
   const normalizedParams = new URLSearchParams();
@@ -140,8 +140,8 @@ export const getListMembersUrl = (params?: ListMembersParams) => {
 export const listMembers = async (
   params?: ListMembersParams,
   options?: RequestInit,
-): Promise<Member[]> => {
-  return customFetch<Member[]>(getListMembersUrl(params), {
+): Promise<MemberProfile[]> => {
+  return customFetch<MemberProfile[]>(getListMembersUrl(params), {
     ...options,
     method: "GET",
   });
@@ -186,7 +186,7 @@ export type ListMembersQueryResult = NonNullable<
 export type ListMembersQueryError = ErrorType<unknown>;
 
 /**
- * @summary List all members
+ * @summary List all members with computed balances
  */
 
 export function useListMembers<

@@ -15,7 +15,7 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * @summary List all members
+ * @summary List all members with computed balances
  */
 export const ListMembersQueryParams = zod.object({
   search: zod.coerce.string().optional(),
@@ -31,6 +31,11 @@ export const ListMembersResponseItem = zod.object({
   profilePictureUrl: zod.string().nullish(),
   signatureUrl: zod.string().nullish(),
   createdAt: zod.string(),
+  totalSavings: zod
+    .number()
+    .describe("Lifetime total credits (savings deposits + loan repayments)"),
+  outstandingLoan: zod.number().describe("Current outstanding loan balance"),
+  currentBalance: zod.number().describe("Net balance (credits - debits)"),
 });
 export const ListMembersResponse = zod.array(ListMembersResponseItem);
 

@@ -44,6 +44,8 @@ export function NewTransaction() {
         setReceipt(data);
         // Invalidate active loans so the Loans page reflects the new transaction immediately
         queryClient.invalidateQueries({ queryKey: getGetActiveLoansQueryKey() });
+        // Refresh members list so balances update immediately
+        queryClient.invalidateQueries({ queryKey: getListMembersQueryKey() });
         // Also refresh the member's profile and ledger
         const mid = data.memberId;
         queryClient.invalidateQueries({ queryKey: getGetMemberQueryKey(mid) });

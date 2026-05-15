@@ -106,22 +106,22 @@ export function MembersList() {
         ) : (
           <div className="space-y-2.5">
             {members?.map(member => {
-              const balance = (member as any).currentBalance ?? 0;
+              const balance = member.currentBalance ?? 0;
               return (
                 <Link key={member.id} href={`/members/${member.id}`} className="block">
                   <div className="bg-white rounded-2xl px-4 py-3.5 shadow-sm border border-gray-100 flex items-center gap-3 hover:border-[#0f2557]/20 hover:shadow transition-all group">
                     <MemberAvatar
                       name={member.name}
-                      photoUrl={(member as any).profilePictureUrl}
+                      photoUrl={member.profilePictureUrl ?? undefined}
                       size="md"
                     />
 
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-[#0f2557] text-sm group-hover:text-[#1a3570] truncate">{member.name}</p>
                       <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5 flex-wrap">
-                        {(member as any).accountNumber && (
+                        {member.accountNumber && (
                           <span className="flex items-center gap-0.5 font-mono font-semibold text-[#0f2557]/60">
-                            <Hash className="h-2.5 w-2.5" />{(member as any).accountNumber}
+                            <Hash className="h-2.5 w-2.5" />{member.accountNumber}
                           </span>
                         )}
                         <span className="flex items-center gap-0.5">
@@ -134,7 +134,7 @@ export function MembersList() {
                       <p className={`font-black text-sm ${balance >= 0 ? "text-[#0f2557]" : "text-destructive"}`}>
                         {formatCurrency(balance)}
                       </p>
-                      <p className="text-[10px] text-muted-foreground">balance</p>
+                      <p className="text-[10px] text-muted-foreground">net balance</p>
                     </div>
 
                     <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-1" />

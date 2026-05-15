@@ -16,7 +16,7 @@ import { requireAdmin } from "../middlewares/auth";
 
 const router = Router();
 
-// Admin-only: list all members
+// Admin-only: list all members with computed balances
 router.get("/members", requireAdmin, async (req, res) => {
   try {
     const query = ListMembersQueryParams.parse(req.query);
@@ -30,11 +30,54 @@ router.get("/members", requireAdmin, async (req, res) => {
     } else {
       members = await db.select().from(membersTable).orderBy(membersTable.createdAt);
     }
-    const result = members.map((m) => ({
-      ...m,
-      joinDate: m.joinDate,
-      createdAt: m.createdAt.toISOString(),
-    }));
+
+    // Fetch all transactions for found members in one query, sorted chronologically
+    const memberIds = members.map((m) => m.id);
+    const allTxs =
+      memberIds.length === 0
+        ? []
+        : await db
+            .select()
+            .from(transactionsTable)
+            .where(
+              memberIds.length === 1
+                ? eq(transactionsTable.memberId, memberIds[0])
+                : or(...memberIds.map((id) => eq(transactionsTable.memberId, id)))
+            )
+            .orderBy(asc(transactionsTable.createdAt));
+
+    // Group transactions by member id
+    const txsByMember = new Map<number, typeof allTxs>();
+    for (const tx of allTxs) {
+      if (!txsByMember.has(tx.memberId)) txsByMember.set(tx.memberId, []);
+      txsByMember.get(tx.memberId)!.push(tx);
+    }
+
+    const result = members.map((m) => {
+      const txs = txsByMember.get(m.id) ?? [];
+      let totalCredits = 0;
+      let totalDebits = 0;
+      let savingsDeposits = 0;
+      let withdrawals = 0;
+      for (const tx of txs) {
+        const amt = parseFloat(tx.amount);
+        if (CREDIT_TYPES.includes(tx.type as any)) {
+          totalCredits += amt;
+          if (tx.type === "SAVINGS_DEPOSIT") savingsDeposits += amt;
+        } else {
+          totalDebits += amt;
+          if (tx.type === "WITHDRAWAL") withdrawals += amt;
+        }
+      }
+      return {
+        ...m,
+        createdAt: m.createdAt.toISOString(),
+        totalSavings: Math.max(0, savingsDeposits - withdrawals),
+        outstandingLoan: calcOutstandingLoan(txs),
+        currentBalance: totalCredits - totalDebits,
+      };
+    });
+
     res.json(result);
   } catch (err) {
     req.log.error({ err }, "listMembers error");
