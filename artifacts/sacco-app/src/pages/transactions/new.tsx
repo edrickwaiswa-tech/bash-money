@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useListMembers, getListMembersQueryKey,
-  useCreateTransaction, CreateTransactionBodyType, TransactionReceipt
+  useCreateTransaction, CreateTransactionBodyType, TransactionReceipt,
+  getGetActiveLoansQueryKey,
+  getGetMemberQueryKey,
+  getGetMemberLedgerQueryKey,
 } from "@workspace/api-client-react";
 import { formatCurrency, formatDate, formatTransactionType } from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +21,7 @@ import { Share2, CheckCircle2 } from "lucide-react";
 
 export function NewTransaction() {
   const [_, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const searchParams = new URLSearchParams(window.location.search);
   const initialMemberId = searchParams.get("memberId");
 
@@ -37,6 +42,12 @@ export function NewTransaction() {
       onSuccess: (data) => {
         toast.success("Transaction recorded successfully");
         setReceipt(data);
+        // Invalidate active loans so the Loans page reflects the new transaction immediately
+        queryClient.invalidateQueries({ queryKey: getGetActiveLoansQueryKey() });
+        // Also refresh the member's profile and ledger
+        const mid = data.memberId;
+        queryClient.invalidateQueries({ queryKey: getGetMemberQueryKey(mid) });
+        queryClient.invalidateQueries({ queryKey: getGetMemberLedgerQueryKey(mid) });
       },
       onError: (err: any) => {
         toast.error(err.error || "Failed to record transaction");

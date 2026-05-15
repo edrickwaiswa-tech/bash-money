@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useGetActiveLoans } from "@workspace/api-client-react";
+import { useGetActiveLoans, getGetActiveLoansQueryKey } from "@workspace/api-client-react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,9 @@ import {
 
 export function Loans() {
   const [, setLocation] = useLocation();
-  const { data: loans, isLoading, refetch } = useGetActiveLoans();
+  const { data: loans, isLoading, refetch } = useGetActiveLoans({
+    query: { refetchOnWindowFocus: true, staleTime: 0, queryKey: getGetActiveLoansQueryKey() }
+  });
 
   const totalOutstanding = loans?.reduce((sum, l) => sum + l.outstandingLoan, 0) ?? 0;
   const totalDisbursed = loans?.reduce((sum, l) => sum + l.totalDisbursed, 0) ?? 0;
