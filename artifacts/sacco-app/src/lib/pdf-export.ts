@@ -120,7 +120,7 @@ async function renderLogoDataUrl(size: number): Promise<string | null> {
     await new Promise<void>((resolve, reject) => {
       img.onload  = () => resolve();
       img.onerror = () => reject(new Error("logo load failed"));
-      img.src = "/bmm-logo-original.jpeg";
+      img.src = "/logo-white.png";
     });
     const canvas = document.createElement("canvas");
     canvas.width  = size;

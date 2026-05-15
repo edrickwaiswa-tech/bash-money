@@ -103,7 +103,7 @@ export function ForgotPin() {
       <div className="w-full max-w-sm space-y-6">
         {/* Logo */}
         <div className="flex flex-col items-center gap-3 text-center">
-          <BmmLogo size="lg" variant="badge" />
+          <BmmLogo size="lg" />
           <h1 className="text-xl font-black tracking-widest uppercase text-[#0f2557] leading-snug">
             Bash M. Money Financial Services Ltd
           </h1>
