@@ -36,17 +36,19 @@ interface MemberLedger {
 }
 
 // ── Color palette — BMM brand ────────────────────────────────────────────────
-const NAVY       = [15,  37,  87]  as [number, number, number];
-const GOLD       = [201, 161, 68]  as [number, number, number];
-const GOLD_LIGHT = [253, 245, 220] as [number, number, number];
-const GREEN      = [22,  163, 74]  as [number, number, number];
-const RED        = [220, 38,  38]  as [number, number, number];
-const DARK       = [15,  23,  42]  as [number, number, number];
-const MUTED      = [100, 116, 139] as [number, number, number];
-const LIGHT_GRAY = [241, 245, 249] as [number, number, number];
-const WHITE      = [255, 255, 255] as [number, number, number];
-const GREEN_LIGHT = [220, 252, 231] as [number, number, number];
-const RED_LIGHT   = [254, 226, 226] as [number, number, number];
+const NAVY           = [15,  37,  87]  as [number, number, number];
+const GOLD           = [201, 161, 68]  as [number, number, number];
+const GOLD_LIGHT     = [253, 245, 220] as [number, number, number];
+const BURGUNDY       = [176, 48,  96]  as [number, number, number];
+const BURGUNDY_LIGHT = [251, 235, 242] as [number, number, number];
+const GREEN          = [22,  163, 74]  as [number, number, number];
+const RED            = [220, 38,  38]  as [number, number, number];
+const DARK           = [15,  23,  42]  as [number, number, number];
+const MUTED          = [100, 116, 139] as [number, number, number];
+const LIGHT_GRAY     = [241, 245, 249] as [number, number, number];
+const WHITE          = [255, 255, 255] as [number, number, number];
+const GREEN_LIGHT    = [220, 252, 231] as [number, number, number];
+const RED_LIGHT      = [254, 226, 226] as [number, number, number];
 
 function formatUsh(amount: number): string {
   return `USh ${new Intl.NumberFormat("en-US", {
@@ -89,13 +91,13 @@ async function loadCircularImage(url: string, diameter: number): Promise<string 
     canvas.height = diameter;
     const ctx = canvas.getContext("2d")!;
 
-    // Gold border ring
+    // Burgundy border ring
     ctx.beginPath();
     ctx.arc(diameter / 2, diameter / 2, diameter / 2, 0, Math.PI * 2);
-    ctx.fillStyle = "#c9a144";
+    ctx.fillStyle = "#B03060";
     ctx.fill();
 
-    // Clip inner circle (leaves 3px gold border)
+    // Clip inner circle (leaves 3px burgundy border)
     const inner = diameter / 2 - 3;
     ctx.beginPath();
     ctx.arc(diameter / 2, diameter / 2, inner, 0, Math.PI * 2);
@@ -112,7 +114,7 @@ async function loadCircularImage(url: string, diameter: number): Promise<string 
 
 /**
  * Load the official BMMFS logo at high resolution for use in jsPDF.
- * Renders the full-colour JPEG onto a white canvas so it prints crisply.
+ * Renders the full-colour logo onto a white canvas so it prints crisply.
  */
 async function renderLogoDataUrl(size: number): Promise<string | null> {
   try {
@@ -120,7 +122,7 @@ async function renderLogoDataUrl(size: number): Promise<string | null> {
     await new Promise<void>((resolve, reject) => {
       img.onload  = () => resolve();
       img.onerror = () => reject(new Error("logo load failed"));
-      img.src = "/logo-white.png";
+      img.src = "/logo.png";
     });
     const canvas = document.createElement("canvas");
     canvas.width  = size;
@@ -139,7 +141,7 @@ export async function exportMemberStatementPDF(
   profile: MemberProfile,
   ledger: MemberLedger,
 ): Promise<void> {
-  const doc  = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  const doc   = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 14;
@@ -161,69 +163,77 @@ export async function exportMemberStatementPDF(
       : "No transactions";
 
   // ═══════════════════════════════════════════════════════════════════════════
-  //  HEADER BAR — taller navy banner, photo isolated in right column
+  //  HEADER BAR — white background, burgundy accent stripe
   // ═══════════════════════════════════════════════════════════════════════════
-  const photoSize = 24;                         // mm — photo diameter
-  const photoPad  = 5;                          // gap around photo
-  const headerH   = photoSize + photoPad * 2;  // header height == photo + padding (34mm)
+  const photoSize = 24;
+  const photoPad  = 5;
+  const headerH   = photoSize + photoPad * 2;  // 34mm
 
-  doc.setFillColor(...NAVY);
+  // White header background
+  doc.setFillColor(...WHITE);
   doc.rect(0, 0, pageW, headerH, "F");
 
-  // Gold accent stripe at very bottom of header
-  doc.setFillColor(...GOLD);
+  // Burgundy accent stripe at bottom of header
+  doc.setFillColor(...BURGUNDY);
   doc.rect(0, headerH - 1.5, pageW, 1.5, "F");
 
-  // ── Photo area — right column, strictly isolated ─────────────────────────
+  // Light separator line
+  doc.setDrawColor(230, 230, 230);
+  doc.setLineWidth(0.2);
+  doc.line(0, headerH, pageW, headerH);
+
+  // ── Photo area — right column ─────────────────────────────────────────────
   const photoX = pageW - margin - photoSize;
-  const photoY = photoPad;                      // 5mm from top, fits inside 34mm header
+  const photoY = photoPad;
 
   if (photoDataUrl) {
     doc.addImage(photoDataUrl, "PNG", photoX, photoY, photoSize, photoSize);
   } else {
-    // Fallback: gold ring + navy fill + initials
-    doc.setFillColor(...GOLD);
+    // Fallback: burgundy ring + light fill + initials
+    doc.setFillColor(...BURGUNDY);
     doc.circle(photoX + photoSize / 2, photoY + photoSize / 2, photoSize / 2, "F");
-    doc.setFillColor(...NAVY);
+    doc.setFillColor(251, 235, 242);
     doc.circle(photoX + photoSize / 2, photoY + photoSize / 2, photoSize / 2 - 1.2, "F");
     const initials = profile.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
-    doc.setTextColor(...GOLD);
+    doc.setTextColor(...BURGUNDY);
     doc.text(initials, photoX + photoSize / 2, photoY + photoSize / 2 + 3.5, { align: "center" });
   }
 
-  // ── Left column: full-height logo + company name ─────────────────────────
-  const logoPad  = 2;                             // 2mm gap from top & bottom
-  const logoMm   = headerH - logoPad * 2;         // fills header (= 30mm)
-  const textX    = margin + logoMm + 4;           // company name starts after logo
-  const textMaxW = photoX - textX - 6;            // constrained to photo gap
+  // ── Left column: logo + company name ─────────────────────────────────────
+  const logoPad  = 2;
+  const logoMm   = headerH - logoPad * 2;   // 30mm
+  const textX    = margin + logoMm + 4;
+  const textMaxW = photoX - textX - 6;
 
-  // Official BMMFS logo — pure white card for maximum print clarity
+  // Logo on white: clean rounded card with subtle border
   if (logoDataUrl) {
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(margin - 0.8, logoPad - 0.8, logoMm + 1.6, logoMm + 1.6, 2, 2, "F");
+    doc.setFillColor(248, 248, 248);
+    doc.setDrawColor(235, 235, 235);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(margin - 0.8, logoPad - 0.8, logoMm + 1.6, logoMm + 1.6, 2, 2, "FD");
     doc.addImage(logoDataUrl, "JPEG", margin, logoPad, logoMm, logoMm);
   } else {
-    doc.setFillColor(...GOLD);
+    doc.setFillColor(...BURGUNDY);
     doc.circle(margin + logoMm / 2, logoPad + logoMm / 2, logoMm / 2, "F");
-    doc.setFillColor(...NAVY);
+    doc.setFillColor(251, 235, 242);
     doc.circle(margin + logoMm / 2, logoPad + logoMm / 2, logoMm / 2 - 2, "F");
-    doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(...GOLD);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(...BURGUNDY);
     doc.text("BMM", margin + logoMm / 2, logoPad + logoMm / 2 + 3.5, { align: "center" });
   }
 
-  // Company name — vertically centred with logo
+  // Company name in navy (dark on white)
   const textCY = logoPad + logoMm / 2;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.setTextColor(...WHITE);
+  doc.setTextColor(...NAVY);
   doc.text("BASH M. MONEY FINANCIAL SERVICES LTD", textX, textCY - 2, { maxWidth: textMaxW });
 
-  // Subtitle — "Member Account Statement"
+  // Subtitle in burgundy
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
-  doc.setTextColor(220, 210, 170);
+  doc.setTextColor(...BURGUNDY);
   doc.text("Member Account Statement", textX, textCY + 5, { maxWidth: textMaxW });
 
   let y = headerH + 4;
@@ -235,19 +245,17 @@ export async function exportMemberStatementPDF(
   doc.setFillColor(...LIGHT_GRAY);
   doc.roundedRect(margin, y, pageW - margin * 2, infoH, 3, 3, "F");
 
-  // Gold left accent bar
-  doc.setFillColor(...GOLD);
+  // Burgundy left accent bar
+  doc.setFillColor(...BURGUNDY);
   doc.roundedRect(margin, y, 3, infoH, 1.5, 1.5, "F");
 
   const infoX = margin + 7;
 
-  // Member name — large
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
   doc.setTextColor(...NAVY);
   doc.text(profile.name, infoX, y + 9);
 
-  // Account number — gold, monospace feel
   if (profile.accountNumber) {
     doc.setFont("courier", "bold");
     doc.setFontSize(9);
@@ -255,12 +263,10 @@ export async function exportMemberStatementPDF(
     doc.text(profile.accountNumber, infoX, y + 16);
   }
 
-  // Row 2 — metadata
-  const r2y   = y + 23;
-  const col1  = infoX;
-  const col2  = pageW / 2 - 4;
+  const r2y  = y + 23;
+  const col1 = infoX;
+  const col2 = pageW / 2 - 4;
 
-  // Statement Period (spanning)
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(...MUTED);
@@ -269,14 +275,12 @@ export async function exportMemberStatementPDF(
   doc.setFont("helvetica", "bold");
   doc.text(periodStr, col1 + 31, r2y);
 
-  // Phone
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...MUTED);
   doc.text("Phone:", col2, r2y);
   doc.setTextColor(...DARK);
   doc.text(profile.phone, col2 + 14, r2y);
 
-  // Row 3 — Account Status (replaces "Member Since") & ID
   const r3y = y + 29;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
@@ -300,23 +304,27 @@ export async function exportMemberStatementPDF(
   const cardW = (pageW - margin * 2 - 8) / 3;
   const cardH = 18;
   const cards = [
-    { label: "Total Savings",     value: formatUsh(profile.totalSavings),     color: GREEN, bg: GREEN_LIGHT },
-    { label: "Outstanding Loan",  value: formatUsh(profile.outstandingLoan),  color: RED,   bg: RED_LIGHT   },
-    { label: "Net Balance",       value: formatUsh(profile.currentBalance),   color: profile.currentBalance >= 0 ? GREEN : RED, bg: profile.currentBalance >= 0 ? GREEN_LIGHT : RED_LIGHT },
+    { label: "Total Savings",    value: formatUsh(profile.totalSavings),    color: GREEN,    bg: GREEN_LIGHT    },
+    { label: "Outstanding Loan", value: formatUsh(profile.outstandingLoan), color: RED,      bg: RED_LIGHT      },
+    { label: "Net Balance",      value: formatUsh(profile.currentBalance),  color: profile.currentBalance >= 0 ? GREEN : RED, bg: profile.currentBalance >= 0 ? GREEN_LIGHT : RED_LIGHT },
   ];
 
   cards.forEach((card, i) => {
     const cx = margin + i * (cardW + 4);
     doc.setFillColor(...card.bg);
     doc.roundedRect(cx, y, cardW, cardH, 2, 2, "F");
+    // Top color bar
+    doc.setFillColor(...card.color);
+    doc.roundedRect(cx, y, cardW, 2.5, 0.5, 0.5, "F");
+    doc.rect(cx, y + 1.5, cardW, 1, "F");
     doc.setFont("helvetica", "normal");
     doc.setFontSize(6.5);
     doc.setTextColor(...MUTED);
-    doc.text(card.label.toUpperCase(), cx + 4, y + 6);
+    doc.text(card.label.toUpperCase(), cx + 4, y + 8);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
     doc.setTextColor(...card.color);
-    doc.text(card.value, cx + 4, y + 14);
+    doc.text(card.value, cx + 4, y + 15);
   });
 
   y += cardH + 5;
@@ -326,7 +334,7 @@ export async function exportMemberStatementPDF(
   // ═══════════════════════════════════════════════════════════════════════════
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.5);
-  doc.setTextColor(...NAVY);
+  doc.setTextColor(...BURGUNDY);
   doc.text("Transaction Ledger", margin, y);
 
   const entryCount = ledger.entries.length;
@@ -359,7 +367,7 @@ export async function exportMemberStatementPDF(
       lineWidth: 0.2,
     },
     headStyles: {
-      fillColor: NAVY,
+      fillColor: BURGUNDY,
       textColor: WHITE,
       fontStyle: "bold",
       fontSize: 7.5,
@@ -386,7 +394,7 @@ export async function exportMemberStatementPDF(
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  //  TOTALS — 3 clean cards (no overlapping text)
+  //  TOTALS — 3 clean cards
   // ═══════════════════════════════════════════════════════════════════════════
   const tableBottom = (doc as any).lastAutoTable.finalY;
   const totalsY     = tableBottom + 5;
@@ -394,23 +402,18 @@ export async function exportMemberStatementPDF(
   const totalsCardW = (pageW - margin * 2 - 8) / 3;
 
   const totals = [
-    { label: "Total Credits",   value: formatUsh(ledger.totalCredits),   color: GREEN, bg: GREEN_LIGHT },
-    { label: "Total Debits",    value: formatUsh(ledger.totalDebits),     color: RED,   bg: RED_LIGHT   },
-    { label: "Closing Balance", value: formatUsh(ledger.currentBalance),  color: ledger.currentBalance >= 0 ? GREEN : RED, bg: ledger.currentBalance >= 0 ? GREEN_LIGHT : RED_LIGHT },
+    { label: "Total Credits",   value: formatUsh(ledger.totalCredits),  color: GREEN, bg: GREEN_LIGHT },
+    { label: "Total Debits",    value: formatUsh(ledger.totalDebits),   color: RED,   bg: RED_LIGHT   },
+    { label: "Closing Balance", value: formatUsh(ledger.currentBalance), color: ledger.currentBalance >= 0 ? GREEN : RED, bg: ledger.currentBalance >= 0 ? GREEN_LIGHT : RED_LIGHT },
   ];
 
-  // Check if there's room on this page; if not, add a page
-  if (totalsY + totalsH + 20 > pageH - 16) {
-    doc.addPage();
-  }
-
+  if (totalsY + totalsH + 20 > pageH - 16) doc.addPage();
   const finalTotalsY = (totalsY + totalsH + 20 > pageH - 16) ? 14 : totalsY;
 
   totals.forEach((t, i) => {
     const tx = margin + i * (totalsCardW + 4);
     doc.setFillColor(...t.bg);
     doc.roundedRect(tx, finalTotalsY, totalsCardW, totalsH, 2, 2, "F");
-    // Colored top border
     doc.setFillColor(...t.color);
     doc.roundedRect(tx, finalTotalsY, totalsCardW, 1.5, 0.5, 0.5, "F");
     doc.setFont("helvetica", "normal");
@@ -425,27 +428,21 @@ export async function exportMemberStatementPDF(
 
   // ═══════════════════════════════════════════════════════════════════════════
   //  PAGE FOOTER — all pages
-  //  Layout (3 rows above bottom edge):
-  //    row 1 (ph-16): gold divider line
-  //    row 2 (ph-11): left company name | center generated timestamp | right page#
-  //    row 3 (ph-6):  left "Confidential" note
   // ═══════════════════════════════════════════════════════════════════════════
-  const genDate = `Report generated on: ${formatShortDate(new Date().toISOString())}`;
+  const genDate  = `Report generated on: ${formatShortDate(new Date().toISOString())}`;
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     const ph = doc.internal.pageSize.getHeight();
 
-    // ── Footer area ───────────────────────────────────────────────────────────
-    // Gold divider line
+    // Gold divider
     doc.setDrawColor(...GOLD);
     doc.setLineWidth(0.5);
     doc.line(margin, ph - 18, pageW - margin, ph - 18);
 
-    // Row 1 — Left: company name | Center: timestamp | Right: page number
     doc.setFont("helvetica", "bold");
     doc.setFontSize(6.5);
-    doc.setTextColor(...NAVY);
+    doc.setTextColor(...BURGUNDY);
     doc.text("Bash M. Money And Financial Services Ltd", margin, ph - 13);
 
     doc.setFont("helvetica", "italic");
@@ -458,32 +455,25 @@ export async function exportMemberStatementPDF(
     doc.setTextColor(...MUTED);
     doc.text(`Page ${i} of ${totalPages}`, pageW - margin, ph - 13, { align: "right" });
 
-    // Row 2 — Left: confidential | Right: support contact
     doc.setFont("helvetica", "normal");
     doc.setFontSize(6);
     doc.setTextColor(...MUTED);
     doc.text("Confidential — For the named member only. Do not distribute.", margin, ph - 8);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(6);
-    doc.setTextColor(...MUTED);
     doc.text("Support: Tel: +256 754 143594 / +256 782 547022", pageW - margin, ph - 8, { align: "right" });
 
-    // ── Authorized Signature — last page only, bottom-right ──────────────────
-    // Sits just above the gold divider, with ~25mm (≈1 inch) of empty stamp space above
+    // Authorized Signature — last page only
     if (i === totalPages) {
       const sigX1    = pageW / 2 + 10;
       const sigX2    = pageW - margin;
-      const sigLineY = ph - 30;   // the actual signature line (above footer divider)
-      // stamp/handwriting space: sigLineY - 25mm up to sigLineY — left intentionally empty
+      const sigLineY = ph - 30;
 
-      doc.setDrawColor(...NAVY);
+      doc.setDrawColor(...BURGUNDY);
       doc.setLineWidth(0.4);
       doc.line(sigX1, sigLineY, sigX2, sigLineY);
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7);
-      doc.setTextColor(...NAVY);
+      doc.setTextColor(...BURGUNDY);
       doc.text("Authorized Signature", (sigX1 + sigX2) / 2, sigLineY + 4, { align: "center" });
 
       doc.setFont("helvetica", "normal");
@@ -493,14 +483,13 @@ export async function exportMemberStatementPDF(
     }
   }
 
-  // ── Save ─────────────────────────────────────────────────────────────────────
   const safeName = profile.name.replace(/\s+/g, "_").toLowerCase();
   const date = new Date().toISOString().split("T")[0];
   doc.save(`BashM_Statement_${safeName}_${date}.pdf`);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  FINANCIAL REPORT PDF
+//  CONSOLIDATED FINANCIAL REPORT PDF
 // ═══════════════════════════════════════════════════════════════════════════════
 
 interface ReportTxRow {
@@ -534,8 +523,8 @@ export async function exportReportPDF(
   adminPhotoUrl: string | null,
   adminEmployeeId?: string | null,
 ): Promise<void> {
-  const doc    = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-  const pageW  = doc.internal.pageSize.getWidth();
+  const doc   = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  const pageW = doc.internal.pageSize.getWidth();
   const margin = 14;
 
   // Load assets
@@ -545,88 +534,97 @@ export async function exportReportPDF(
   }
   const logoDataUrl = await renderLogoDataUrl(500);
 
-  // ── HEADER ─────────────────────────────────────────────────────────────────
+  // ── HEADER — white background, burgundy stripe ──────────────────────────────
   const photoSize = 22;
   const photoPad  = 5;
-  const headerH   = photoSize + photoPad * 2;
+  const headerH   = photoSize + photoPad * 2;  // 32mm
 
-  doc.setFillColor(...NAVY);
+  // White header background
+  doc.setFillColor(...WHITE);
   doc.rect(0, 0, pageW, headerH, "F");
 
-  // Gold accent stripe
-  doc.setFillColor(...GOLD);
+  // Burgundy accent stripe at bottom
+  doc.setFillColor(...BURGUNDY);
   doc.rect(0, headerH - 1.5, pageW, 1.5, "F");
 
-  // ── Right column: [Admin Name + Employee ID]  [Photo] ──────────────────────
-  const photoX   = pageW - margin - photoSize;
-  const photoY   = photoPad;
-  const nameGap  = 4;                          // mm gap between name block and photo
-  const nameRightEdge = photoX - nameGap;      // text right-aligns to this X
+  // Light separator
+  doc.setDrawColor(230, 230, 230);
+  doc.setLineWidth(0.2);
+  doc.line(0, headerH, pageW, headerH);
 
-  // Admin photo (far right)
+  // ── Right column: admin name + employee ID + photo ─────────────────────────
+  const photoX        = pageW - margin - photoSize;
+  const photoY        = photoPad;
+  const nameGap       = 4;
+  const nameRightEdge = photoX - nameGap;
+
   if (adminPhotoDataUrl) {
     doc.addImage(adminPhotoDataUrl, "PNG", photoX, photoY, photoSize, photoSize);
   } else {
-    doc.setFillColor(...GOLD);
+    // Fallback: burgundy ring
+    doc.setFillColor(...BURGUNDY);
     doc.circle(photoX + photoSize / 2, photoY + photoSize / 2, photoSize / 2, "F");
-    doc.setFillColor(...NAVY);
+    doc.setFillColor(251, 235, 242);
     doc.circle(photoX + photoSize / 2, photoY + photoSize / 2, photoSize / 2 - 1.2, "F");
     const initials = adminName.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
-    doc.setTextColor(...GOLD);
+    doc.setTextColor(...BURGUNDY);
     doc.text(initials, photoX + photoSize / 2, photoY + photoSize / 2 + 3, { align: "center" });
   }
 
-  // Admin name — bold white, RIGHT-aligned just left of photo, vertically centred
-  const nameCenterY = photoY + photoSize / 2;  // same vertical centre as photo
+  // Admin name — navy on white, right-aligned
+  const nameCenterY = photoY + photoSize / 2;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  doc.setTextColor(...WHITE);
+  doc.setTextColor(...NAVY);
   doc.text(adminName, nameRightEdge, nameCenterY - 1.5, { align: "right", maxWidth: 48 });
 
-  // Employee ID — smaller, gold-tinted, right-aligned below name
   const empIdLabel = adminEmployeeId ? adminEmployeeId : "Administrator";
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6.5);
-  doc.setTextColor(220, 210, 170);
+  doc.setTextColor(...MUTED);
   doc.text(empIdLabel, nameRightEdge, nameCenterY + 4.5, { align: "right", maxWidth: 48 });
 
-  // ── Left column: full-height logo + company name ─────────────────────────
+  // ── Left column: logo + company name ─────────────────────────────────────
   const logoPad  = 2;
-  const logoMm   = headerH - logoPad * 2;              // fills header (= 28mm)
+  const logoMm   = headerH - logoPad * 2;
   const textX    = margin + logoMm + 4;
   const textMaxW = nameRightEdge - 48 - textX - 4;
 
-  // Official BMMFS logo — pure white card for maximum print clarity
+  // Color logo on white background
   if (logoDataUrl) {
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(margin - 0.8, logoPad - 0.8, logoMm + 1.6, logoMm + 1.6, 2, 2, "F");
+    doc.setFillColor(248, 248, 248);
+    doc.setDrawColor(235, 235, 235);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(margin - 0.8, logoPad - 0.8, logoMm + 1.6, logoMm + 1.6, 2, 2, "FD");
     doc.addImage(logoDataUrl, "JPEG", margin, logoPad, logoMm, logoMm);
   } else {
-    doc.setFillColor(...GOLD);
+    doc.setFillColor(...BURGUNDY);
     doc.circle(margin + logoMm / 2, logoPad + logoMm / 2, logoMm / 2, "F");
-    doc.setFillColor(...NAVY);
+    doc.setFillColor(251, 235, 242);
     doc.circle(margin + logoMm / 2, logoPad + logoMm / 2, logoMm / 2 - 2, "F");
-    doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(...GOLD);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(...BURGUNDY);
     doc.text("BMM", margin + logoMm / 2, logoPad + logoMm / 2 + 3, { align: "center" });
   }
 
-  // Company name — vertically centred with logo
+  // Company name in navy (dark on white)
   const textCY = logoPad + logoMm / 2;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.setTextColor(...WHITE);
+  doc.setTextColor(...NAVY);
   doc.text("BASH M. MONEY FINANCIAL SERVICES LTD", textX, textCY - 2, { maxWidth: textMaxW });
 
+  // Subtitle in burgundy
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
-  doc.setTextColor(220, 210, 170);
+  doc.setTextColor(...BURGUNDY);
   doc.text("Financial Transaction Report", textX, textCY + 5, { maxWidth: textMaxW });
 
   let y = headerH + 6;
 
   // ── REPORT TITLE BLOCK ─────────────────────────────────────────────────────
+  // Soft gold-tinted card, burgundy title text
   doc.setFillColor(...GOLD_LIGHT);
   doc.roundedRect(margin, y, pageW - margin * 2, 20, 2, 2, "F");
   doc.setDrawColor(...GOLD);
@@ -635,7 +633,7 @@ export async function exportReportPDF(
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  doc.setTextColor(...NAVY);
+  doc.setTextColor(...BURGUNDY);
   doc.text("CONSOLIDATED TRANSACTIONS REPORT", pageW / 2, y + 7, { align: "center" });
 
   doc.setFont("helvetica", "normal");
@@ -646,22 +644,20 @@ export async function exportReportPDF(
   doc.setFontSize(7);
   doc.text(
     `Generated: ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}  |  Prepared by: ${adminName}`,
-    pageW / 2,
-    y + 18,
-    { align: "center" },
+    pageW / 2, y + 18, { align: "center" },
   );
 
   y += 26;
 
   // ── SUMMARY CARDS ──────────────────────────────────────────────────────────
-  const cardW   = (pageW - margin * 2 - 6) / 3;
-  const cardH   = 22;
-  const cardY   = y;
+  const cardW = (pageW - margin * 2 - 6) / 3;
+  const cardH = 22;
+  const cardY = y;
 
   const cards = [
-    { label: "Total Deposits",     value: data.summary.totalDeposits,    color: GREEN,       bgLight: GREEN_LIGHT },
-    { label: "Total Withdrawals",  value: data.summary.totalWithdrawals,  color: RED,         bgLight: RED_LIGHT   },
-    { label: "Net Cash Flow",      value: data.summary.netCashFlow,       color: NAVY,        bgLight: LIGHT_GRAY  },
+    { label: "Total Deposits",    value: data.summary.totalDeposits,   color: GREEN,    bgLight: GREEN_LIGHT    },
+    { label: "Total Withdrawals", value: data.summary.totalWithdrawals, color: RED,      bgLight: RED_LIGHT      },
+    { label: "Net Cash Flow",     value: data.summary.netCashFlow,      color: BURGUNDY, bgLight: BURGUNDY_LIGHT },
   ];
 
   cards.forEach(({ label: cl, value, color, bgLight }, idx) => {
@@ -694,7 +690,7 @@ export async function exportReportPDF(
   // ── TRANSACTION TABLE ──────────────────────────────────────────────────────
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  doc.setTextColor(...NAVY);
+  doc.setTextColor(...BURGUNDY);
   doc.text("Transaction Details", margin, y);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
@@ -725,12 +721,12 @@ export async function exportReportPDF(
       lineWidth: 0.15,
     },
     headStyles: {
-      fillColor: NAVY,
+      fillColor: BURGUNDY,
       textColor: WHITE,
       fontStyle: "bold",
       fontSize: 7,
     },
-    alternateRowStyles: { fillColor: LIGHT_GRAY },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
     columnStyles: {
       0: { cellWidth: 32 },
       1: { cellWidth: 42 },
@@ -756,25 +752,29 @@ export async function exportReportPDF(
     doc.setFillColor(...GOLD);
     doc.rect(margin, ph - 14, pageW - margin * 2, 0.5, "F");
 
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...BURGUNDY);
+    doc.text("BASH M. MONEY FINANCIAL SERVICES LTD — Secured & Encrypted", margin, ph - 9);
+
     doc.setFont("helvetica", "normal");
     doc.setFontSize(6.5);
     doc.setTextColor(...MUTED);
-    doc.text("BASH M. MONEY FINANCIAL SERVICES LTD — Secured & Encrypted", margin, ph - 9);
     doc.text(`Page ${i} of ${totalPages}`, pageW - margin, ph - 9, { align: "right" });
 
-    // Authorized signature on last page
+    // Authorized signature — last page only
     if (i === totalPages) {
       const sigX1    = pageW / 2 + 10;
       const sigX2    = pageW - margin;
       const sigLineY = ph - 30;
 
-      doc.setDrawColor(...NAVY);
+      doc.setDrawColor(...BURGUNDY);
       doc.setLineWidth(0.4);
       doc.line(sigX1, sigLineY, sigX2, sigLineY);
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7);
-      doc.setTextColor(...NAVY);
+      doc.setTextColor(...BURGUNDY);
       doc.text("Authorized Signature", (sigX1 + sigX2) / 2, sigLineY + 4, { align: "center" });
 
       doc.setFont("helvetica", "normal");
@@ -785,7 +785,6 @@ export async function exportReportPDF(
     }
   }
 
-  // ── Save ───────────────────────────────────────────────────────────────────
   const date = new Date().toISOString().split("T")[0];
   doc.save(`BashM_Report_${date}.pdf`);
 }
