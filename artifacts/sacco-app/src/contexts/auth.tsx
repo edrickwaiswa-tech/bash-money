@@ -42,12 +42,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchMe().finally(() => setIsLoading(false));
   }, [fetchMe]);
 
-  const login = async (username: string, pin: string) => {
+  const login = async (email: string, password: string) => {
     const res = await fetch(`${BASE}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ username, pin }),
+      body: JSON.stringify({ email, password }),
     });
     if (!res.ok) {
       const data = await res.json();

@@ -11,35 +11,44 @@ const router: IRouter = Router();
 const pendingOtps = new Map<string, { code: string; expiresAt: number }>();
 const resetTokens = new Map<string, { adminId: number; expiresAt: number }>();
 
-// ── POST /auth/login (PIN-based) ────────────────────────────────────────────
+// ── POST /auth/login (email+password OR username+pin) ───────────────────────
 router.post("/auth/login", async (req, res): Promise<void> => {
-  const { username, pin } = req.body;
+  const { username, pin, email, password } = req.body;
 
-  if (!username || !pin) {
-    res.status(400).json({ error: "Username and PIN are required" });
+  // Accept either email+password (new UI) or username+pin (legacy / backward compat)
+  const identifier = (email || username) as string | undefined;
+  const credential = (password || pin) as string | undefined;
+
+  if (!identifier || !credential) {
+    res.status(400).json({ error: "Email and password are required" });
     return;
   }
 
+  // Lookup by email first, then by username — supports both login flows
   const [admin] = await db
     .select()
     .from(adminUsersTable)
-    .where(eq(adminUsersTable.username, username as string));
+    .where(or(
+      eq(adminUsersTable.email, identifier),
+      eq(adminUsersTable.username, identifier),
+    ));
 
   if (!admin) {
     res.status(401).json({ error: "Invalid credentials" });
     return;
   }
 
-  // Primary: check pinHash; fallback to passwordHash if PIN not yet set
+  // Verify against pinHash first (most recent credential), then passwordHash
   let valid = false;
   if (admin.pinHash) {
-    valid = await bcrypt.compare(pin as string, admin.pinHash);
-  } else {
-    valid = await bcrypt.compare(pin as string, admin.passwordHash);
+    valid = await bcrypt.compare(credential, admin.pinHash);
+  }
+  if (!valid) {
+    valid = await bcrypt.compare(credential, admin.passwordHash);
   }
 
   if (!valid) {
-    res.status(401).json({ error: "Incorrect PIN" });
+    res.status(401).json({ error: "Incorrect email or password" });
     return;
   }
 
