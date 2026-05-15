@@ -16,11 +16,11 @@ export function Layout({ children }: LayoutProps) {
   const [imgErr, setImgErr] = useState(false);
 
   const navItems = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard, adminOnly: true },
-    { href: "/members", label: "Members", icon: Users, adminOnly: true },
-    { href: "/loans", label: "Loans", icon: Landmark, adminOnly: true },
-    { href: "/transactions/new", label: "Transact", icon: ArrowRightLeft, adminOnly: true },
-    { href: "/reports", label: "Reports", icon: BarChart3, adminOnly: true },
+    { href: "/",                  label: "Dashboard", icon: LayoutDashboard, adminOnly: true },
+    { href: "/members",           label: "Members",   icon: Users,           adminOnly: true },
+    { href: "/loans",             label: "Loans",     icon: Landmark,        adminOnly: true },
+    { href: "/transactions/new",  label: "Transact",  icon: ArrowRightLeft,  adminOnly: true },
+    { href: "/reports",           label: "Reports",   icon: BarChart3,       adminOnly: true },
   ];
 
   const visibleNavItems = navItems.filter((item) => !item.adminOnly || user);
@@ -34,27 +34,27 @@ export function Layout({ children }: LayoutProps) {
   const initials = displayName.trim().split(/\s+/).map((n) => n[0]?.toUpperCase() ?? "").slice(0, 2).join("");
 
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-[#f4f6fb]">
-      <header className="sticky top-0 z-30 shadow-sm" style={{ background: "#0f2557", borderBottom: "2px solid #c9a144" }}>
-        <div className="flex items-center justify-between px-4 h-[72px] max-w-lg mx-auto w-full">
-          <div style={{ filter: "drop-shadow(0 0 12px rgba(255,245,180,0.38)) drop-shadow(0 3px 14px rgba(0,0,0,0.5))" }}>
-            <BmmLogo size="md" />
-          </div>
+    <div className="flex flex-col min-h-[100dvh]" style={{ background: "linear-gradient(160deg, #f7f5f2 0%, #eef1f8 50%, #f0edf6 100%)" }}>
+      {/* ── Top header bar ── */}
+      <header
+        className="sticky top-0 z-30 bg-white border-b border-gray-100"
+        style={{ boxShadow: "0 2px 12px rgba(15,37,87,0.07)" }}
+      >
+        <div className="flex items-center justify-between px-4 h-[64px] max-w-lg mx-auto w-full">
+          <BmmLogo size="md" />
 
           {user && (
-            <div className="flex items-center gap-2.5">
-              {/* Admin name + avatar pill — links to /profile */}
+            <div className="flex items-center gap-2">
+              {/* Admin name + avatar pill → /profile */}
               <Link href="/profile">
-                <div className="flex items-center gap-3 bg-white/10 hover:bg-white/15 border border-white/10 rounded-full pl-3 pr-1.5 py-1 cursor-pointer transition-colors">
-                  {/* Name block — LEFT of photo */}
+                <div className="flex items-center gap-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-full pl-3 pr-1.5 py-1 cursor-pointer transition-colors">
                   <div className="leading-none text-right">
-                    <p className="text-[11px] font-black text-white leading-tight truncate max-w-[110px]">{displayName}</p>
-                    <p className="text-[9px] text-white/50 leading-tight mt-0.5 font-mono tracking-wide">
+                    <p className="text-[11px] font-black text-[#0f2557] leading-tight truncate max-w-[100px]">{displayName}</p>
+                    <p className="text-[9px] text-gray-400 leading-tight mt-0.5 font-mono tracking-wide">
                       {user.employeeId ?? "Admin"}
                     </p>
                   </div>
-                  {/* Avatar — RIGHT, ~12px gap from name via gap-3 */}
-                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-[#c9a144]/20 border-2 border-[#c9a144]/60 flex items-center justify-center">
+                  <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-[#B03060]/10 border-2 border-[#B03060]/30 flex items-center justify-center">
                     {user.profilePictureUrl && !imgErr ? (
                       <img
                         src={user.profilePictureUrl}
@@ -63,7 +63,7 @@ export function Layout({ children }: LayoutProps) {
                         onError={() => setImgErr(true)}
                       />
                     ) : (
-                      <span className="text-[10px] font-black text-[#c9a144]">{initials}</span>
+                      <span className="text-[10px] font-black text-[#B03060]">{initials}</span>
                     )}
                   </div>
                 </div>
@@ -73,7 +73,7 @@ export function Layout({ children }: LayoutProps) {
                 variant="ghost"
                 size="sm"
                 onClick={handleLogout}
-                className="gap-1.5 text-white/60 hover:text-white hover:bg-white/10 px-2"
+                className="gap-1.5 text-gray-400 hover:text-[#B03060] hover:bg-[#B03060]/5 px-2 transition-colors"
                 title="Sign out"
               >
                 <LogOut className="w-4 h-4" />
@@ -88,14 +88,16 @@ export function Layout({ children }: LayoutProps) {
         {children}
       </main>
 
-      {/* Consistent branding footer */}
-      <div className="pb-20 md:pb-2 flex items-center justify-center gap-1.5 text-[10px] text-muted-foreground py-2">
+      {/* Branding footer */}
+      <div className="pb-20 md:pb-2 flex items-center justify-center gap-1.5 text-[10px] text-gray-400 py-2">
         <ShieldCheck className="w-3 h-3 text-[#c9a144] flex-shrink-0" />
-        <span>Bash M. Money And Financial Services Ltd - Secured &amp; Encrypted</span>
+        <span>Bash M. Money And Financial Services Ltd — Secured &amp; Encrypted</span>
       </div>
 
+      {/* ── Bottom navigation bar ── */}
       {visibleNavItems.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-white border-gray-200 shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-100"
+          style={{ boxShadow: "0 -4px 16px rgba(15,37,87,0.07)" }}>
           <nav className="flex justify-around items-center h-16 px-2 max-w-lg mx-auto">
             {visibleNavItems.map((item) => {
               const isActive = location === item.href;
@@ -104,12 +106,17 @@ export function Layout({ children }: LayoutProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
-                    isActive ? "text-[#0f2557]" : "text-gray-400 hover:text-gray-700"
+                  className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors relative ${
+                    isActive ? "text-[#B03060]" : "text-gray-400 hover:text-gray-600"
                   }`}
                 >
+                  {isActive && (
+                    <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[3px] rounded-b-full bg-[#B03060]" />
+                  )}
                   <Icon className={`w-5 h-5 ${isActive ? "stroke-[2.5px]" : ""}`} />
-                  <span className={`text-[10px] font-semibold ${isActive ? "text-[#c9a144]" : ""}`}>{item.label}</span>
+                  <span className={`text-[10px] font-bold ${isActive ? "text-[#B03060]" : "text-gray-400"}`}>
+                    {item.label}
+                  </span>
                 </Link>
               );
             })}
