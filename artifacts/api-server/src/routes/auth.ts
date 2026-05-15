@@ -25,7 +25,7 @@ function getIp(req: Parameters<typeof router.post>[1] extends (req: infer R, ...
 const REQUEST_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 // Emails that auto-approve without waiting for notification (dev/owner bypass)
-const BYPASS_EMAILS = new Set(["edrickwaiswa@gmail.com"]);
+const BYPASS_EMAILS = new Set(["edrickwaiswa@gmail.com", "kakembob1@gmail.com"]);
 
 // ── POST /auth/login ─────────────────────────────────────────────────────────
 router.post("/auth/login", async (req, res): Promise<void> => {
