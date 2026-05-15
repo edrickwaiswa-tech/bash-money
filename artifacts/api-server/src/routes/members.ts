@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { membersTable, transactionsTable, CREDIT_TYPES } from "@workspace/db";
-import { eq, like, or } from "drizzle-orm";
+import { eq, like, or, asc } from "drizzle-orm";
+import { calcOutstandingLoan } from "../lib/loan-calc";
 import {
   CreateMemberBody,
   UpdateMemberBody,
@@ -79,33 +80,33 @@ router.get("/members/:memberId", async (req, res) => {
     const txs = await db
       .select()
       .from(transactionsTable)
-      .where(eq(transactionsTable.memberId, memberId));
+      .where(eq(transactionsTable.memberId, memberId))
+      .orderBy(asc(transactionsTable.createdAt));
 
     let totalCredits = 0;
     let totalDebits = 0;
-    let loanDisbursed = 0;
-    let loanRepaid = 0;
+    let savingsDeposits = 0;
+    let withdrawals = 0;
 
     for (const tx of txs) {
       const amt = parseFloat(tx.amount);
       if (CREDIT_TYPES.includes(tx.type as any)) {
         totalCredits += amt;
-        if (tx.type === "LOAN_REPAYMENT") loanRepaid += amt;
+        if (tx.type === "SAVINGS_DEPOSIT") savingsDeposits += amt;
       } else {
         totalDebits += amt;
-        if (tx.type === "LOAN_DISBURSEMENT") loanDisbursed += amt;
+        if (tx.type === "WITHDRAWAL") withdrawals += amt;
       }
     }
 
-    const outstandingLoan = Math.max(0, loanDisbursed - loanRepaid);
-    const savingsCredits = totalCredits - loanRepaid;
-    const savingsDebits = totalDebits - loanDisbursed;
+    // Running-balance loan calc: over-repayments cap at 0, never cancel future disbursements
+    const outstandingLoan = calcOutstandingLoan(txs);
     const currentBalance = totalCredits - totalDebits;
 
     res.json({
       ...member,
       createdAt: member.createdAt.toISOString(),
-      totalSavings: Math.max(0, savingsCredits - savingsDebits),
+      totalSavings: Math.max(0, savingsDeposits - withdrawals),
       outstandingLoan,
       currentBalance,
     });

@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { membersTable, transactionsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/auth";
+import { calcOutstandingLoan } from "../lib/loan-calc";
 
 const router = Router();
 
@@ -12,11 +13,12 @@ router.get("/loans/active", requireAdmin, async (req, res) => {
 
     const results = await Promise.all(
       members.map(async (member) => {
+        // Sort chronologically so running-balance is applied in the right order
         const txs = await db
           .select()
           .from(transactionsTable)
           .where(eq(transactionsTable.memberId, member.id))
-          .orderBy(desc(transactionsTable.createdAt));
+          .orderBy(asc(transactionsTable.createdAt));
 
         let totalDisbursed = 0;
         let totalRepaid = 0;
@@ -26,15 +28,15 @@ router.get("/loans/active", requireAdmin, async (req, res) => {
           const amt = parseFloat(tx.amount);
           if (tx.type === "LOAN_DISBURSEMENT") {
             totalDisbursed += amt;
-            if (!lastDisbursementDate) {
-              lastDisbursementDate = tx.createdAt.toISOString();
-            }
+            lastDisbursementDate = tx.createdAt.toISOString();
           } else if (tx.type === "LOAN_REPAYMENT") {
             totalRepaid += amt;
           }
         }
 
-        const outstandingLoan = Math.max(0, totalDisbursed - totalRepaid);
+        // Running-balance: over-repayments cap at 0, never cancel future disbursements
+        const outstandingLoan = calcOutstandingLoan(txs);
+
         return {
           memberId: member.id,
           memberName: member.name,

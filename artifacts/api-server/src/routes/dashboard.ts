@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { membersTable, transactionsTable, CREDIT_TYPES } from "@workspace/db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, asc } from "drizzle-orm";
+import { calcOutstandingLoan } from "../lib/loan-calc";
 import { GetRecentTransactionsQueryParams } from "@workspace/api-zod";
 import { requireAdmin } from "../middlewares/auth";
 
@@ -13,17 +14,22 @@ router.get("/dashboard/summary", requireAdmin, async (req, res) => {
       .select({ count: sql<number>`count(*)::int` })
       .from(membersTable);
 
-    const allTxs = await db.select().from(transactionsTable);
+    // Fetch all transactions sorted chronologically for correct running-balance per member
+    const allTxs = await db
+      .select()
+      .from(transactionsTable)
+      .orderBy(asc(transactionsTable.createdAt));
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     let totalSavingsCredits = 0;
     let totalSavingsDebits = 0;
-    let totalLoansGiven = 0;
-    let totalLoansRepaid = 0;
     let totalDepositsToday = 0;
     let totalWithdrawalsToday = 0;
+
+    // Group by member for running-balance loan calc
+    const memberTxMap = new Map<number, typeof allTxs>();
 
     for (const tx of allTxs) {
       const amt = parseFloat(tx.amount);
@@ -32,20 +38,25 @@ router.get("/dashboard/summary", requireAdmin, async (req, res) => {
       if (tx.type === "SAVINGS_DEPOSIT") {
         totalSavingsCredits += amt;
         if (isToday) totalDepositsToday += amt;
-      } else if (tx.type === "LOAN_REPAYMENT") {
-        totalLoansRepaid += amt;
-      } else if (tx.type === "LOAN_DISBURSEMENT") {
-        totalLoansGiven += amt;
       } else if (tx.type === "WITHDRAWAL") {
         totalSavingsDebits += amt;
         if (isToday) totalWithdrawalsToday += amt;
       }
+
+      if (!memberTxMap.has(tx.memberId)) memberTxMap.set(tx.memberId, []);
+      memberTxMap.get(tx.memberId)!.push(tx);
+    }
+
+    // Sum outstanding loan per member using running-balance (over-repayments cap at 0)
+    let totalLoansOutstanding = 0;
+    for (const memberTxs of memberTxMap.values()) {
+      totalLoansOutstanding += calcOutstandingLoan(memberTxs);
     }
 
     res.json({
       totalMembers,
       totalSavings: Math.max(0, totalSavingsCredits - totalSavingsDebits),
-      totalLoansOutstanding: Math.max(0, totalLoansGiven - totalLoansRepaid),
+      totalLoansOutstanding,
       totalTransactions: allTxs.length,
       totalDepositsToday,
       totalWithdrawalsToday,
