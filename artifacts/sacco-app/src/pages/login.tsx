@@ -284,6 +284,12 @@ export function Login() {
         setAdminError(data.error ?? "Login failed");
         return;
       }
+      if (data.status === "approved") {
+        // Owner bypass — session already set, go straight to dashboard
+        await refreshProfile();
+        navigate("/");
+        return;
+      }
       if (data.status === "pending" && data.requestToken) {
         setRequestToken(data.requestToken);
         setCountdown(REQUEST_TTL);

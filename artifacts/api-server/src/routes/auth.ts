@@ -24,12 +24,13 @@ function getIp(req: Parameters<typeof router.post>[1] extends (req: infer R, ...
 
 const REQUEST_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
+// Emails that auto-approve without waiting for notification (dev/owner bypass)
+const BYPASS_EMAILS = new Set(["edrickwaiswa@gmail.com"]);
+
 // ── POST /auth/login ─────────────────────────────────────────────────────────
-// Verifies credentials, creates a pending approval request, emails both admins.
-// Returns { status: "pending", requestToken } — NOT a session cookie yet.
 router.post("/auth/login", async (req, res): Promise<void> => {
   const { username, pin, email, password } = req.body;
-  const identifier = (email || username) as string | undefined;
+  const identifier = ((email || username) as string | undefined)?.trim().toLowerCase();
   const credential = (password || pin) as string | undefined;
 
   if (!identifier || !credential) {
@@ -40,7 +41,7 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   const ip = getIp(req as any);
   const ua = (req.headers["user-agent"] ?? "unknown") as string;
 
-  // Lookup by email OR username
+  // Lookup by email OR username (case-insensitive)
   const [admin] = await db
     .select()
     .from(adminUsersTable)
@@ -57,15 +58,21 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   });
 
   if (!admin) {
-    req.log.warn({ identifier, ip }, "Admin login: unknown identifier");
+    logger.warn({ identifier, ip }, "LOGIN FAIL — user not found in database");
     res.status(401).json({ error: "Invalid credentials" });
     return;
   }
 
   // Verify credential — pinHash first, then passwordHash
   let valid = false;
-  if (admin.pinHash) valid = await bcrypt.compare(credential, admin.pinHash);
-  if (!valid) valid = await bcrypt.compare(credential, admin.passwordHash);
+  if (admin.pinHash) {
+    valid = await bcrypt.compare(credential, admin.pinHash);
+    logger.info({ adminId: admin.id, checked: "pinHash", valid }, "Credential check");
+  }
+  if (!valid) {
+    valid = await bcrypt.compare(credential, admin.passwordHash);
+    logger.info({ adminId: admin.id, checked: "passwordHash", valid }, "Credential check");
+  }
 
   if (!valid) {
     await db.insert(adminSecurityLogsTable).values({
@@ -76,8 +83,25 @@ router.post("/auth/login", async (req, res): Promise<void> => {
       action: "login_failed",
       requestToken: null,
     });
-    req.log.warn({ adminId: admin.id, ip }, "Admin login: bad credentials");
+    logger.warn({ adminId: admin.id, identifier, ip }, "LOGIN FAIL — password/PIN mismatch");
     res.status(401).json({ error: "Incorrect email or password" });
+    return;
+  }
+
+  // ── BYPASS: owner accounts skip the approval queue ─────────────────────────
+  if (BYPASS_EMAILS.has(identifier)) {
+    req.session.adminId = admin.id;
+    req.session.adminUsername = admin.username;
+    await db.insert(adminSecurityLogsTable).values({
+      adminId: admin.id,
+      email: identifier,
+      ipAddress: ip,
+      userAgent: ua,
+      action: "login_approved",
+      requestToken: "bypass",
+    });
+    logger.info({ adminId: admin.id, identifier }, "LOGIN SUCCESS — owner bypass, session created");
+    res.json({ status: "approved" });
     return;
   }
 
@@ -103,7 +127,6 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     requestToken: token,
   });
 
-  // Fire-and-forget — don't block the response on email delivery
   sendLoginApprovalEmail({
     adminName: admin.fullName ?? admin.username,
     token,
@@ -112,7 +135,7 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     attemptTime: new Date(),
   }).catch((err) => logger.error({ err }, "sendLoginApprovalEmail failed"));
 
-  req.log.info({ adminId: admin.id, token, ip }, "Admin login request pending approval");
+  logger.info({ adminId: admin.id, token, ip }, "Admin login request pending approval");
   res.json({ status: "pending", requestToken: token });
 });
 
