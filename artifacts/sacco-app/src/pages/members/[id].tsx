@@ -131,7 +131,6 @@ export function MemberDetail() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Open file picker → read as data URL → open crop modal
   const handlePicFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -144,7 +143,6 @@ export function MemberDetail() {
     e.target.value = "";
   }, []);
 
-  // After cropping → upload base64 PNG to API
   const handleCropApply = async (dataUrl: string) => {
     setUploadingPic(true);
     try {
@@ -168,7 +166,6 @@ export function MemberDetail() {
     }
   };
 
-  // Signature file upload
   const handleSigFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -194,7 +191,6 @@ export function MemberDetail() {
     }
   };
 
-  // Signature from canvas
   const handleSigDrawSave = async (dataUrl: string) => {
     setUploadingSig(true);
     try {
@@ -219,7 +215,7 @@ export function MemberDetail() {
   if (isProfileLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <div className="w-10 h-10 rounded-full border-2 border-[#0f2557] border-t-transparent animate-spin" />
+        <div className="w-10 h-10 rounded-full border-2 border-[#B03060] border-t-transparent animate-spin" />
         <p className="text-sm text-muted-foreground">Loading member profile…</p>
       </div>
     );
@@ -232,17 +228,17 @@ export function MemberDetail() {
 
   return (
     <div className="bg-[#f4f6fb] min-h-screen">
-      {/* ── Navy Hero Header ── */}
-      <div className="bg-[#0f2557] px-4 pt-4 pb-8">
+      {/* ── White Hero Header ── */}
+      <div className="bg-white border-b border-gray-100 px-4 pt-4 pb-8 shadow-sm">
         <div className="flex items-center gap-3 mb-5">
           <Link href="/members">
-            <button className="text-white/70 hover:text-white transition-colors p-1 -ml-1">
+            <button className="text-[#1A1A1A]/50 hover:text-[#B03060] transition-colors p-1 -ml-1">
               <ArrowLeft className="h-5 w-5" />
             </button>
           </Link>
           <div className="flex-1 min-w-0">
-            <h1 className="text-white font-bold text-lg tracking-tight truncate">{profile.name}</h1>
-            <p className="text-white/50 text-[11px] flex items-center gap-1 mt-0.5">
+            <h1 className="text-[#1A1A1A] font-bold text-lg tracking-tight truncate">{profile.name}</h1>
+            <p className="text-[#1A1A1A]/40 text-[11px] flex items-center gap-1 mt-0.5">
               <Hash className="h-3 w-3" />
               <span className="font-mono">{profile.accountNumber}</span>
             </p>
@@ -250,7 +246,7 @@ export function MemberDetail() {
           <button
             onClick={handleExportPDF}
             disabled={isExporting || isLedgerLoading || !ledger}
-            className="text-white/60 hover:text-[#c9a144] transition-colors"
+            className="text-[#1A1A1A]/40 hover:text-[#B03060] transition-colors disabled:opacity-30"
             title="Export PDF"
           >
             <FileDown className="h-5 w-5" />
@@ -259,7 +255,7 @@ export function MemberDetail() {
 
         {/* Profile Row */}
         <div className="flex items-end gap-4">
-          {/* Hero Avatar — gold ring, dark bg, gold initials fallback */}
+          {/* Hero Avatar — burgundy ring */}
           <div className="relative flex-shrink-0">
             <button
               onClick={() => picInputRef.current?.click()}
@@ -267,7 +263,7 @@ export function MemberDetail() {
               className="group block"
               title="Change profile photo"
             >
-              <div className="w-20 h-20 rounded-full overflow-hidden border-[3px] border-[#c9a144] bg-[#1a3570] flex items-center justify-center shadow-xl">
+              <div className="w-20 h-20 rounded-full overflow-hidden border-[3px] border-[#B03060] bg-[#f9f0f3] flex items-center justify-center shadow-xl">
                 {effectivePic && !heroImgError ? (
                   <img
                     src={effectivePic}
@@ -276,10 +272,10 @@ export function MemberDetail() {
                     onError={() => setHeroImgError(true)}
                   />
                 ) : (
-                  <span className="text-[#c9a144] font-black text-2xl tracking-tight select-none">{initials}</span>
+                  <span className="text-[#B03060] font-black text-2xl tracking-tight select-none">{initials}</span>
                 )}
               </div>
-              <div className="absolute -bottom-1 -right-1 bg-[#c9a144] text-[#0f2557] rounded-full p-1.5 shadow-lg group-hover:scale-110 transition-transform">
+              <div className="absolute -bottom-1 -right-1 bg-[#B03060] text-white rounded-full p-1.5 shadow-lg group-hover:scale-110 transition-transform">
                 <Camera className="w-3.5 h-3.5" />
               </div>
             </button>
@@ -288,29 +284,27 @@ export function MemberDetail() {
 
           {/* Balances */}
           <div className="flex-1 grid grid-cols-2 gap-2">
-            <div className="bg-white/10 rounded-xl p-3">
-              <p className="text-white/50 text-[9px] uppercase tracking-widest font-semibold mb-1">Savings</p>
-              <p className="text-[#c9a144] font-black text-base leading-tight">{formatCurrency(profile.totalSavings)}</p>
+            <div className="bg-white rounded-xl p-3 border border-[#B03060]/20 shadow-sm">
+              <p className="text-[#B03060] text-[9px] uppercase tracking-widest font-semibold mb-1">Savings</p>
+              <p className="text-[#B03060] font-black text-base leading-tight">{formatCurrency(profile.totalSavings)}</p>
             </div>
-            <div className="bg-white/10 rounded-xl p-3">
-              <p className="text-white/50 text-[9px] uppercase tracking-widest font-semibold mb-1">Loan</p>
-              <p className="text-red-300 font-black text-base leading-tight">{formatCurrency(profile.outstandingLoan)}</p>
+            <div className="bg-white rounded-xl p-3 border border-[#B03060]/20 shadow-sm">
+              <p className="text-[#B03060] text-[9px] uppercase tracking-widest font-semibold mb-1">Loan</p>
+              <p className="text-destructive font-black text-base leading-tight">{formatCurrency(profile.outstandingLoan)}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Net Balance strip */}
-      <div className="mx-4 -mt-4 bg-white rounded-2xl shadow-lg border border-[#c9a144]/20 px-5 py-3.5 flex items-center justify-between"
-        style={{ boxShadow: "0 4px 20px rgba(15,37,87,0.10), 0 1px 4px rgba(201,161,68,0.08)" }}
-      >
+      <div className="mx-4 -mt-4 bg-white rounded-2xl shadow-lg border border-gray-100 px-5 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-[#0f2557]/5 flex items-center justify-center">
-            <Wallet className="h-3.5 w-3.5 text-[#0f2557]" />
+          <div className="w-7 h-7 rounded-lg bg-[#B03060]/8 flex items-center justify-center">
+            <Wallet className="h-3.5 w-3.5 text-[#B03060]" />
           </div>
-          <span className="text-sm font-bold text-[#0f2557]">Net Balance</span>
+          <span className="text-sm font-bold text-[#1A1A1A]">Net Balance</span>
         </div>
-        <span className={`text-xl font-black tracking-tight ${profile.currentBalance >= 0 ? "text-[#0f2557]" : "text-destructive"}`}>
+        <span className={`text-xl font-black tracking-tight ${profile.currentBalance >= 0 ? "text-[#1A1A1A]" : "text-destructive"}`}>
           {formatCurrency(profile.currentBalance)}
         </span>
       </div>
@@ -328,7 +322,7 @@ export function MemberDetail() {
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="rounded-lg text-xs font-semibold py-2.5 data-[state=active]:bg-[#0f2557] data-[state=active]:text-white data-[state=active]:shadow"
+                className="rounded-lg text-xs font-semibold py-2.5 data-[state=active]:bg-[#B03060] data-[state=active]:text-white data-[state=active]:shadow"
               >
                 {tab.label}
               </TabsTrigger>
@@ -338,8 +332,8 @@ export function MemberDetail() {
           {/* ── LEDGER ── */}
           <TabsContent value="ledger" className="space-y-3 mt-0">
             <div className="flex justify-between items-center">
-              <h3 className="font-bold text-[#0f2557] text-sm">Transaction History</h3>
-              <Button size="sm" asChild className="bg-[#0f2557] hover:bg-[#1a3570] text-white rounded-lg h-8 text-xs">
+              <h3 className="font-bold text-[#1A1A1A] text-sm">Transaction History</h3>
+              <Button size="sm" asChild className="bg-[#B03060] hover:bg-[#8B2548] text-white rounded-lg h-8 text-xs">
                 <Link href={`/transactions/new?memberId=${memberId}`}>+ Transact</Link>
               </Button>
             </div>
@@ -353,14 +347,14 @@ export function MemberDetail() {
                   {ledger?.entries.map(entry => (
                     <div key={entry.id} className="px-4 py-3.5">
                       <div className="flex justify-between items-start mb-1">
-                        <div className="font-semibold text-[#0f2557] text-sm">{formatTransactionType(entry.type)}</div>
+                        <div className="font-semibold text-[#1A1A1A] text-sm">{formatTransactionType(entry.type)}</div>
                         <div className={`font-bold text-sm ${entry.direction === "credit" ? "text-emerald-600" : "text-destructive"}`}>
                           {entry.direction === "credit" ? "+" : "-"}{formatCurrency(entry.amount)}
                         </div>
                       </div>
                       <div className="flex justify-between items-center text-[11px] text-muted-foreground">
                         <span>{formatDate(entry.createdAt)}</span>
-                        <span>Bal: <span className={`font-semibold ${entry.runningBalance >= 0 ? "text-[#0f2557]" : "text-destructive"}`}>{formatCurrency(entry.runningBalance)}</span></span>
+                        <span>Bal: <span className={`font-semibold ${entry.runningBalance >= 0 ? "text-[#1A1A1A]" : "text-destructive"}`}>{formatCurrency(entry.runningBalance)}</span></span>
                       </div>
                       {entry.notes && (
                         <p className="mt-2 text-[11px] text-muted-foreground bg-[#f4f6fb] px-2.5 py-1.5 rounded-lg">{entry.notes}</p>
@@ -394,7 +388,7 @@ export function MemberDetail() {
                     <div className="grid grid-cols-3 gap-2">
                       <div className="text-center">
                         <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Disbursed</p>
-                        <p className="font-black text-sm text-[#0f2557] mt-0.5">{formatCurrency(disbursed)}</p>
+                        <p className="font-black text-sm text-[#1A1A1A] mt-0.5">{formatCurrency(disbursed)}</p>
                       </div>
                       <div className="text-center border-x border-gray-100">
                         <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Repaid</p>
@@ -422,7 +416,7 @@ export function MemberDetail() {
 
                   {/* Quick action buttons */}
                   <div className="flex gap-2">
-                    <Button size="sm" asChild className="flex-1 gap-1.5 bg-[#0f2557] hover:bg-[#1a3570] text-white rounded-lg h-9 text-xs">
+                    <Button size="sm" asChild className="flex-1 gap-1.5 bg-[#B03060] hover:bg-[#8B2548] text-white rounded-lg h-9 text-xs">
                       <Link href={`/transactions/new?memberId=${memberId}&type=LOAN_DISBURSEMENT`}>
                         + Disburse Loan
                       </Link>
@@ -437,7 +431,7 @@ export function MemberDetail() {
                   </div>
 
                   {/* Loan transaction history */}
-                  <h3 className="font-bold text-[#0f2557] text-sm">Loan History</h3>
+                  <h3 className="font-bold text-[#1A1A1A] text-sm">Loan History</h3>
                   <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     {isLedgerLoading ? (
                       <div className="p-6 text-center text-sm text-muted-foreground">Loading…</div>
@@ -483,18 +477,16 @@ export function MemberDetail() {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-[#0f2557] text-sm">Profile Photo</h3>
+                  <h3 className="font-bold text-[#1A1A1A] text-sm">Profile Photo</h3>
                   <p className="text-[11px] text-muted-foreground mt-0.5">Click photo or camera icon to update</p>
                 </div>
-                {/* Secure badge */}
-                <div className="flex items-center gap-1.5 bg-[#0f2557]/5 border border-[#0f2557]/10 rounded-full px-2.5 py-1">
-                  <Lock className="w-2.5 h-2.5 text-[#c9a144]" />
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-[#0f2557]/60">Secure & Encrypted</span>
+                <div className="flex items-center gap-1.5 bg-[#B03060]/5 border border-[#B03060]/10 rounded-full px-2.5 py-1">
+                  <Lock className="w-2.5 h-2.5 text-[#B03060]" />
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-[#B03060]/70">Secure & Encrypted</span>
                 </div>
               </div>
 
               <div className="px-5 py-5 flex items-center gap-5">
-                {/* Profile tab avatar — uses MemberAvatar for automatic onError fallback */}
                 <button
                   onClick={() => picInputRef.current?.click()}
                   disabled={uploadingPic}
@@ -506,7 +498,7 @@ export function MemberDetail() {
                     photoUrl={effectivePic}
                     size="xl"
                   />
-                  <div className="absolute -bottom-1 -right-1 bg-[#c9a144] text-[#0f2557] rounded-full p-2 shadow-lg group-hover:scale-110 transition-transform border-2 border-white">
+                  <div className="absolute -bottom-1 -right-1 bg-[#B03060] text-white rounded-full p-2 shadow-lg group-hover:scale-110 transition-transform border-2 border-white">
                     <Camera className="w-3.5 h-3.5" />
                   </div>
                 </button>
@@ -515,7 +507,7 @@ export function MemberDetail() {
                   <button
                     onClick={() => picInputRef.current?.click()}
                     disabled={uploadingPic}
-                    className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-[#0f2557]/20 rounded-xl py-3 text-sm font-semibold text-[#0f2557] hover:border-[#c9a144] hover:bg-[#c9a144]/5 transition-all disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-[#B03060]/20 rounded-xl py-3 text-sm font-semibold text-[#B03060] hover:border-[#B03060] hover:bg-[#B03060]/5 transition-all disabled:opacity-50"
                   >
                     <Camera className="w-4 h-4" />
                     {uploadingPic ? "Uploading…" : effectivePic ? "Change Photo" : "Upload Photo"}
@@ -533,7 +525,7 @@ export function MemberDetail() {
             {/* Account Details */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-50">
-                <h3 className="font-bold text-[#0f2557] text-sm">Account Details</h3>
+                <h3 className="font-bold text-[#1A1A1A] text-sm">Account Details</h3>
               </div>
               <div className="px-5 py-4 space-y-4">
                 {[
@@ -544,16 +536,16 @@ export function MemberDetail() {
                 ].map(({ icon: Icon, label, value, mono, copy }) => (
                   <div key={label} className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-[#0f2557]/5 flex items-center justify-center flex-shrink-0">
-                        <Icon className="h-3.5 w-3.5 text-[#0f2557]" />
+                      <div className="w-8 h-8 rounded-lg bg-[#B03060]/5 flex items-center justify-center flex-shrink-0">
+                        <Icon className="h-3.5 w-3.5 text-[#B03060]" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{label}</p>
-                        <p className={`text-sm text-[#0f2557] truncate ${mono ? "font-mono font-black tracking-wide" : "font-semibold"}`}>{value}</p>
+                        <p className={`text-sm text-[#1A1A1A] truncate ${mono ? "font-mono font-black tracking-wide" : "font-semibold"}`}>{value}</p>
                       </div>
                     </div>
                     {copy && (
-                      <button onClick={copyAccountNumber} className="ml-2 text-muted-foreground hover:text-[#c9a144] transition-colors flex-shrink-0">
+                      <button onClick={copyAccountNumber} className="ml-2 text-muted-foreground hover:text-[#B03060] transition-colors flex-shrink-0">
                         {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                       </button>
                     )}
@@ -566,7 +558,7 @@ export function MemberDetail() {
             <div className="flex gap-3">
               <Button
                 variant="outline"
-                className="flex-1 gap-2 rounded-xl h-11 border-[#0f2557]/20 text-[#0f2557] hover:bg-[#0f2557] hover:text-white transition-all"
+                className="flex-1 gap-2 rounded-xl h-11 border-[#B03060]/20 text-[#B03060] hover:bg-[#B03060] hover:text-white transition-all"
                 onClick={() => setIsEditOpen(true)}
               >
                 <Edit className="h-4 w-4" /> Edit Profile
@@ -587,7 +579,7 @@ export function MemberDetail() {
                   <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-[#0f2557] text-sm">Member PIN</h3>
+                  <h3 className="font-bold text-[#1A1A1A] text-sm">Member PIN</h3>
                   <p className="text-[11px] text-muted-foreground mt-0.5">Reset the member's self-service login PIN</p>
                 </div>
               </div>
@@ -613,19 +605,19 @@ export function MemberDetail() {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-[#0f2557] text-sm">Member Signature</h3>
+                  <h3 className="font-bold text-[#1A1A1A] text-sm">Member Signature</h3>
                   <p className="text-[11px] text-muted-foreground mt-0.5">Draw or upload for official records</p>
                 </div>
-                <div className="flex items-center gap-1.5 bg-[#0f2557]/5 border border-[#0f2557]/10 rounded-full px-2.5 py-1">
-                  <Lock className="w-2.5 h-2.5 text-[#c9a144]" />
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-[#0f2557]/60">Secure & Encrypted</span>
+                <div className="flex items-center gap-1.5 bg-[#B03060]/5 border border-[#B03060]/10 rounded-full px-2.5 py-1">
+                  <Lock className="w-2.5 h-2.5 text-[#B03060]" />
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-[#B03060]/70">Secure & Encrypted</span>
                 </div>
               </div>
               <div className="px-5 py-5 space-y-4">
                 {effectiveSig && (
                   <div className="space-y-2">
                     <Label className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Current Signature</Label>
-                    <div className="border-2 border-[#0f2557]/10 rounded-xl overflow-hidden bg-white p-4 flex items-center justify-center min-h-[100px]">
+                    <div className="border-2 border-[#B03060]/10 rounded-xl overflow-hidden bg-white p-4 flex items-center justify-center min-h-[100px]">
                       <img src={effectiveSig} alt="Signature" className="max-h-20 max-w-full object-contain" />
                     </div>
                     <button onClick={() => setSigPreview(null)} className="text-[11px] text-destructive hover:underline flex items-center gap-1">
@@ -641,7 +633,7 @@ export function MemberDetail() {
                       key={mode}
                       onClick={() => setSigMode(mode)}
                       className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-semibold rounded-lg transition-all ${
-                        sigMode === mode ? "bg-[#0f2557] text-white shadow" : "text-muted-foreground hover:text-[#0f2557]"
+                        sigMode === mode ? "bg-[#B03060] text-white shadow" : "text-muted-foreground hover:text-[#B03060]"
                       }`}
                     >
                       {mode === "draw" ? <Pen className="w-3.5 h-3.5" /> : <Upload className="w-3.5 h-3.5" />}
@@ -657,7 +649,7 @@ export function MemberDetail() {
                     <input ref={sigInputRef} type="file" accept="image/*" className="hidden" onChange={handleSigFileChange} />
                     <Button
                       variant="outline"
-                      className="w-full gap-2 h-24 border-2 border-dashed border-[#0f2557]/20 rounded-xl flex-col hover:border-[#c9a144] hover:bg-[#c9a144]/5 transition-all"
+                      className="w-full gap-2 h-24 border-2 border-dashed border-[#B03060]/20 rounded-xl flex-col hover:border-[#B03060] hover:bg-[#B03060]/5 transition-all"
                       onClick={() => sigInputRef.current?.click()}
                       disabled={uploadingSig}
                     >
@@ -689,7 +681,7 @@ export function MemberDetail() {
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-[#0f2557]">Edit Member Profile</DialogTitle>
+            <DialogTitle className="text-[#1A1A1A]">Edit Member Profile</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleUpdate} className="space-y-4">
             {[
@@ -704,13 +696,13 @@ export function MemberDetail() {
                   value={editData[key]}
                   onChange={e => setEditData({ ...editData, [key]: e.target.value })}
                   required
-                  className="rounded-xl border-[#0f2557]/20 focus-visible:ring-[#0f2557]"
+                  className="rounded-xl border-[#B03060]/20 focus-visible:ring-[#B03060]"
                 />
               </div>
             ))}
             <DialogFooter className="gap-2">
               <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)} className="rounded-xl">Cancel</Button>
-              <Button type="submit" disabled={updateMember.isPending} className="rounded-xl bg-[#0f2557] hover:bg-[#1a3570]">
+              <Button type="submit" disabled={updateMember.isPending} className="rounded-xl bg-[#B03060] hover:bg-[#8B2548]">
                 {updateMember.isPending ? "Saving…" : "Save Changes"}
               </Button>
             </DialogFooter>
@@ -721,7 +713,7 @@ export function MemberDetail() {
       {/* Delete Modal */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent className="rounded-2xl">
-          <DialogHeader><DialogTitle className="text-[#0f2557]">Delete Member?</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-[#1A1A1A]">Delete Member?</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
             Are you sure you want to delete <strong>{profile.name}</strong>? This action cannot be undone.
           </p>
