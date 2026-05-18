@@ -236,7 +236,7 @@ router.get("/members/:memberId/ledger", async (req, res) => {
 
     res.json({
       member: { ...member, createdAt: member.createdAt.toISOString() },
-      entries,
+      entries: entries.reverse(),
       currentBalance: runningBalance,
       totalCredits,
       totalDebits,
