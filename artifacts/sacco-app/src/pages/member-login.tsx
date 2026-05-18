@@ -66,13 +66,16 @@ export function MemberLogin() {
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-[#f4f6fb]">
-      {/* Navy top banner */}
-      <div className="bg-[#0f2557] px-4 pt-12 pb-16 flex flex-col items-center text-center">
+      {/* Burgundy top banner */}
+      <div
+        className="px-4 pt-12 pb-16 flex flex-col items-center text-center"
+        style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
+      >
         <BmmLogo size="lg" />
         <h1 className="text-white font-black text-lg tracking-widest mt-4 leading-snug uppercase">
           Bash M. Money Financial Services Ltd
         </h1>
-        <p className="text-white/50 text-xs mt-1 uppercase tracking-widest font-medium">Member Portal</p>
+        <p className="text-white/60 text-xs mt-1 uppercase tracking-widest font-medium">Member Portal</p>
       </div>
 
       <div className="flex-1 px-4 -mt-8 flex flex-col max-w-sm mx-auto w-full">
@@ -81,10 +84,10 @@ export function MemberLogin() {
           {step === "phone" ? (
             <>
               <div className="px-6 pt-7 pb-5 text-center border-b border-gray-50">
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-[#0f2557]/5 mb-3">
-                  <Phone className="w-5 h-5 text-[#0f2557]" />
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-[#B03060]/8 mb-3">
+                  <Phone className="w-5 h-5 text-[#B03060]" />
                 </div>
-                <p className="font-bold text-[#0f2557] text-base">Sign in to your account</p>
+                <p className="font-bold text-[#1A1A1A] text-base">Sign in to your account</p>
                 <p className="text-xs text-muted-foreground mt-0.5">Enter your registered phone number</p>
               </div>
               <div className="px-6 py-6">
@@ -98,7 +101,7 @@ export function MemberLogin() {
                       onChange={(e) => setPhone(e.target.value)}
                       disabled={isLoading}
                       autoFocus
-                      className="text-center rounded-xl border-[#0f2557]/15 focus-visible:ring-[#0f2557] h-11"
+                      className="text-center rounded-xl border-[#B03060]/15 focus-visible:ring-[#B03060] h-11"
                     />
                   </div>
                   {error && (
@@ -106,7 +109,8 @@ export function MemberLogin() {
                   )}
                   <Button
                     type="submit"
-                    className="w-full h-11 rounded-xl bg-[#0f2557] hover:bg-[#1a3570] text-white font-semibold"
+                    className="w-full h-11 rounded-xl text-white font-semibold"
+                    style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
                     disabled={isLoading || !phone.trim()}
                   >
                     {isLoading ? "Sending…" : "Send Verification Code"}
@@ -119,16 +123,16 @@ export function MemberLogin() {
               <div className="px-6 pt-7 pb-5 text-center border-b border-gray-50 relative">
                 <button
                   onClick={() => { setStep("phone"); setOtp(""); setError(""); setDevCode(""); }}
-                  className="absolute left-4 top-5 text-muted-foreground hover:text-[#0f2557] transition-colors"
+                  className="absolute left-4 top-5 text-muted-foreground hover:text-[#B03060] transition-colors"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-[#0f2557]/5 mb-3">
-                  <Lock className="w-5 h-5 text-[#0f2557]" />
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-[#B03060]/8 mb-3">
+                  <Lock className="w-5 h-5 text-[#B03060]" />
                 </div>
-                <p className="font-bold text-[#0f2557] text-base">Enter verification code</p>
+                <p className="font-bold text-[#1A1A1A] text-base">Enter verification code</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Sent to <span className="font-semibold text-[#0f2557]">{phone}</span>
+                  Sent to <span className="font-semibold text-[#B03060]">{phone}</span>
                 </p>
               </div>
               <div className="px-6 py-6 space-y-4">
@@ -155,7 +159,8 @@ export function MemberLogin() {
                 )}
 
                 <Button
-                  className="w-full h-11 rounded-xl bg-[#0f2557] hover:bg-[#1a3570] text-white font-semibold"
+                  className="w-full h-11 rounded-xl text-white font-semibold"
+                  style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
                   disabled={isLoading || otp.length < 6}
                   onClick={() => handleVerifyOtp(otp)}
                 >
@@ -165,7 +170,7 @@ export function MemberLogin() {
                 <button
                   type="button"
                   onClick={handleRequestOtp as any}
-                  className="w-full text-sm text-[#c9a144] hover:text-[#0f2557] font-semibold transition-colors"
+                  className="w-full text-sm text-[#B03060] hover:text-[#7B1535] font-semibold transition-colors"
                   disabled={isLoading}
                 >
                   Resend code
@@ -177,7 +182,7 @@ export function MemberLogin() {
 
         {/* Trust footer */}
         <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground mt-6 mb-8">
-          <ShieldCheck className="w-3.5 h-3.5 text-[#c9a144]" />
+          <ShieldCheck className="w-3.5 h-3.5 text-[#B03060]" />
           <span>Bash M. Money And Financial Services Ltd — Secured &amp; Encrypted</span>
         </div>
       </div>

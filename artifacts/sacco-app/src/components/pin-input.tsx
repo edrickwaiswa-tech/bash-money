@@ -90,8 +90,8 @@ export function PinInput({
               error
                 ? "border-red-400 bg-red-50 text-red-600 ring-2 ring-red-200"
                 : filled
-                ? "border-[#0f2557] bg-[#0f2557]/5 text-[#0f2557]"
-                : "border-gray-200 text-[#0f2557] focus:border-[#0f2557] focus:ring-2 focus:ring-[#0f2557]/20",
+                ? "border-[#B03060] bg-[#B03060]/5 text-[#B03060]"
+                : "border-gray-200 text-[#1A1A1A] focus:border-[#B03060] focus:ring-2 focus:ring-[#B03060]/20",
               disabled && "opacity-50 cursor-not-allowed",
             )}
           />

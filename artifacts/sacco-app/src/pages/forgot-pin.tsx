@@ -23,7 +23,6 @@ export function ForgotPin() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // ── Step 1: Request OTP ─────────────────────────────────────────────────
   const handleRequestCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -36,10 +35,7 @@ export function ForgotPin() {
         body: JSON.stringify({ phone }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Failed to send code");
-        return;
-      }
+      if (!res.ok) { setError(data.error ?? "Failed to send code"); return; }
       setDevCode(data.devCode ?? null);
       setStep("code");
     } finally {
@@ -47,7 +43,6 @@ export function ForgotPin() {
     }
   };
 
-  // ── Step 2: Verify OTP ──────────────────────────────────────────────────
   const handleVerifyCode = async (enteredCode?: string) => {
     const codeToCheck = enteredCode ?? code;
     if (codeToCheck.length < 6) return;
@@ -61,11 +56,7 @@ export function ForgotPin() {
         body: JSON.stringify({ phone, code: codeToCheck }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Verification failed");
-        setCode("");
-        return;
-      }
+      if (!res.ok) { setError(data.error ?? "Verification failed"); setCode(""); return; }
       setResetToken(data.resetToken);
       setStep("new-pin");
     } finally {
@@ -73,7 +64,6 @@ export function ForgotPin() {
     }
   };
 
-  // ── Step 3: Set new PIN ──────────────────────────────────────────────────
   const handleResetPin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPin.length < 4) { setError("Enter a 4-digit PIN"); return; }
@@ -88,10 +78,7 @@ export function ForgotPin() {
         body: JSON.stringify({ resetToken, pin: newPin }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Failed to reset PIN");
-        return;
-      }
+      if (!res.ok) { setError(data.error ?? "Failed to reset PIN"); return; }
       setStep("success");
     } finally {
       setIsLoading(false);
@@ -99,33 +86,38 @@ export function ForgotPin() {
   };
 
   return (
-    <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gray-50 dark:bg-zinc-950 px-4">
-      <div className="w-full max-w-sm space-y-6">
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-3 text-center">
-          <BmmLogo size="lg" />
-          <h1 className="text-xl font-black tracking-widest uppercase text-[#0f2557] leading-snug">
-            Bash M. Money Financial Services Ltd
-          </h1>
-        </div>
+    <div className="min-h-[100dvh] flex flex-col bg-[#f4f6fb]">
+      {/* Burgundy top banner */}
+      <div
+        className="px-4 pt-12 pb-16 flex flex-col items-center text-center"
+        style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
+      >
+        <BmmLogo size="lg" />
+        <h1 className="text-white font-black text-lg tracking-widest mt-4 leading-snug uppercase">
+          Bash M. Money Financial Services Ltd
+        </h1>
+        <p className="text-white/60 text-xs mt-1 uppercase tracking-widest font-medium">Member Portal</p>
+      </div>
 
-        <Card className="shadow-md border-0">
+      <div className="flex-1 px-4 -mt-8 flex flex-col max-w-sm mx-auto w-full">
+        <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+
           {/* ── Step 1: Phone ── */}
           {step === "phone" && (
             <>
-              <CardHeader className="pb-2 pt-6 px-6">
-                <div className="flex items-center gap-2 mb-1">
-                  <Phone className="w-4 h-4 text-primary" />
-                  <span className="font-semibold text-base">Forgot PIN</span>
+              <div className="px-6 pt-7 pb-5 text-center border-b border-gray-50">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-[#B03060]/8 mb-3">
+                  <Phone className="w-5 h-5 text-[#B03060]" />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Enter your registered phone number. Bash M. Money will send a verification code.
+                <p className="font-bold text-[#1A1A1A] text-base">Forgot PIN</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Enter your registered phone number to receive a verification code.
                 </p>
-              </CardHeader>
-              <CardContent className="px-6 pt-2 pb-6">
+              </div>
+              <div className="px-6 py-6">
                 <form onSubmit={handleRequestCode} className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Phone number</label>
+                    <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Phone Number</label>
                     <Input
                       type="tel"
                       placeholder="+256 700 000000"
@@ -134,46 +126,57 @@ export function ForgotPin() {
                       required
                       disabled={isLoading}
                       autoFocus
+                      className="text-center rounded-xl border-[#B03060]/15 focus-visible:ring-[#B03060] h-11"
                     />
                   </div>
 
                   {error && (
-                    <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">
+                    <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-xl">
                       <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                       <span>{error}</span>
                     </div>
                   )}
 
-                  <Button type="submit" className="w-full" disabled={isLoading || !phone}>
+                  <Button
+                    type="submit"
+                    className="w-full h-11 rounded-xl text-white font-semibold"
+                    style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
+                    disabled={isLoading || !phone}
+                  >
                     {isLoading ? "Checking..." : "Send verification code"}
                   </Button>
 
                   <div className="text-center">
-                    <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+                    <Link href="/login" className="text-sm text-muted-foreground hover:text-[#B03060] inline-flex items-center gap-1 transition-colors font-medium">
                       <ArrowLeft className="w-3 h-3" /> Back to sign in
                     </Link>
                   </div>
                 </form>
-              </CardContent>
+              </div>
             </>
           )}
 
           {/* ── Step 2: Enter OTP ── */}
           {step === "code" && (
             <>
-              <CardHeader className="pb-2 pt-6 px-6 text-center">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <KeyRound className="w-4 h-4 text-primary" />
-                  <span className="font-semibold text-base">Enter verification code</span>
+              <div className="px-6 pt-7 pb-5 text-center border-b border-gray-50 relative">
+                <button
+                  onClick={() => { setStep("phone"); setCode(""); setError(""); setDevCode(null); }}
+                  className="absolute left-4 top-5 text-muted-foreground hover:text-[#B03060] transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-[#B03060]/8 mb-3">
+                  <KeyRound className="w-5 h-5 text-[#B03060]" />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  A 6-digit code was sent to <strong>{phone}</strong>
+                <p className="font-bold text-[#1A1A1A] text-base">Enter verification code</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  A 6-digit code was sent to <span className="font-semibold text-[#B03060]">{phone}</span>
                 </p>
-              </CardHeader>
-              <CardContent className="px-6 pt-3 pb-6 space-y-4">
-                {/* Dev mode banner */}
+              </div>
+              <div className="px-6 py-6 space-y-4">
                 {devCode && (
-                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2.5 text-sm">
+                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl px-3 py-3 text-sm">
                     <Info className="w-4 h-4 mt-0.5 shrink-0" />
                     <div>
                       <p className="font-semibold text-xs uppercase tracking-wide mb-0.5">Test mode — SMS simulated</p>
@@ -193,14 +196,15 @@ export function ForgotPin() {
                 />
 
                 {error && (
-                  <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">
+                  <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-xl">
                     <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                     <span>{error}</span>
                   </div>
                 )}
 
                 <Button
-                  className="w-full"
+                  className="w-full h-11 rounded-xl text-white font-semibold"
+                  style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
                   onClick={() => handleVerifyCode()}
                   disabled={isLoading || code.length < 6}
                 >
@@ -210,34 +214,37 @@ export function ForgotPin() {
                 <div className="flex justify-between text-sm">
                   <button
                     type="button"
-                    className="text-muted-foreground hover:text-foreground"
+                    className="text-muted-foreground hover:text-[#1A1A1A] transition-colors font-medium"
                     onClick={() => { setStep("phone"); setCode(""); setError(""); setDevCode(null); }}
                   >
                     ← Change number
                   </button>
                   <button
                     type="button"
-                    className="text-primary hover:underline"
+                    className="text-[#B03060] hover:underline font-semibold"
                     onClick={() => { setStep("phone"); setCode(""); setError(""); setDevCode(null); }}
                   >
                     Resend code
                   </button>
                 </div>
-              </CardContent>
+              </div>
             </>
           )}
 
           {/* ── Step 3: New PIN ── */}
           {step === "new-pin" && (
             <>
-              <CardHeader className="pb-2 pt-6 px-6 text-center">
-                <span className="font-semibold text-base">Create new PIN</span>
-                <p className="text-xs text-muted-foreground mt-1">Choose a 4-digit PIN for Bash M. Money</p>
-              </CardHeader>
-              <CardContent className="px-6 pt-3 pb-6">
+              <div className="px-6 pt-7 pb-5 text-center border-b border-gray-50">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-[#B03060]/8 mb-3">
+                  <KeyRound className="w-5 h-5 text-[#B03060]" />
+                </div>
+                <p className="font-bold text-[#1A1A1A] text-base">Create new PIN</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Choose a 4-digit PIN for Bash M. Money</p>
+              </div>
+              <div className="px-6 py-6">
                 <form onSubmit={handleResetPin} className="space-y-5">
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-center">New PIN</p>
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider text-center">New PIN</p>
                     <PinInput
                       length={4}
                       value={newPin}
@@ -248,7 +255,7 @@ export function ForgotPin() {
                   </div>
 
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-center">Confirm PIN</p>
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider text-center">Confirm PIN</p>
                     <PinInput
                       length={4}
                       value={confirmPin}
@@ -259,7 +266,7 @@ export function ForgotPin() {
                   </div>
 
                   {error && (
-                    <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">
+                    <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-xl">
                       <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                       <span>{error}</span>
                     </div>
@@ -267,32 +274,45 @@ export function ForgotPin() {
 
                   <Button
                     type="submit"
-                    className="w-full"
+                    className="w-full h-11 rounded-xl text-white font-semibold"
+                    style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
                     disabled={isLoading || newPin.length < 4 || confirmPin.length < 4}
                   >
                     {isLoading ? "Saving..." : "Set new PIN"}
                   </Button>
                 </form>
-              </CardContent>
+              </div>
             </>
           )}
 
           {/* ── Step 4: Success ── */}
           {step === "success" && (
-            <CardContent className="px-6 py-10 text-center space-y-4">
+            <div className="px-6 py-10 text-center space-y-4">
               <div className="flex justify-center">
-                <CheckCircle className="w-14 h-14 text-primary" />
+                <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center">
+                  <CheckCircle className="w-10 h-10 text-emerald-500" />
+                </div>
               </div>
-              <h2 className="text-lg font-bold">PIN updated!</h2>
-              <p className="text-sm text-muted-foreground">
+              <h2 className="text-lg font-black text-[#1A1A1A]">PIN Updated!</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 Your Bash M. Money PIN has been changed successfully. You can now sign in with your new PIN.
               </p>
-              <Button className="w-full" onClick={() => navigate("/login")}>
+              <Button
+                className="w-full h-11 rounded-xl text-white font-semibold"
+                style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
+                onClick={() => navigate("/login")}
+              >
                 Go to sign in
               </Button>
-            </CardContent>
+            </div>
           )}
-        </Card>
+        </div>
+
+        {/* Trust footer */}
+        <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground mt-6 mb-8">
+          <CheckCircle className="w-3.5 h-3.5 text-[#B03060]" />
+          <span>Bash M. Money And Financial Services Ltd — Secured &amp; Encrypted</span>
+        </div>
       </div>
     </div>
   );
