@@ -69,12 +69,14 @@ router.get("/members", requireAdmin, async (req, res) => {
           if (tx.type === "WITHDRAWAL") withdrawals += amt;
         }
       }
+      const totalSavings = Math.max(0, savingsDeposits - withdrawals);
+      const outstandingLoan = calcOutstandingLoan(txs);
       return {
         ...m,
         createdAt: m.createdAt.toISOString(),
-        totalSavings: Math.max(0, savingsDeposits - withdrawals),
-        outstandingLoan: calcOutstandingLoan(txs),
-        currentBalance: totalCredits - totalDebits,
+        totalSavings,
+        outstandingLoan,
+        currentBalance: totalSavings - outstandingLoan,
       };
     });
 
@@ -143,13 +145,14 @@ router.get("/members/:memberId", async (req, res) => {
     }
 
     // Running-balance loan calc: over-repayments cap at 0, never cancel future disbursements
+    const totalSavings = Math.max(0, savingsDeposits - withdrawals);
     const outstandingLoan = calcOutstandingLoan(txs);
-    const currentBalance = totalCredits - totalDebits;
+    const currentBalance = totalSavings - outstandingLoan;
 
     res.json({
       ...member,
       createdAt: member.createdAt.toISOString(),
-      totalSavings: Math.max(0, savingsDeposits - withdrawals),
+      totalSavings,
       outstandingLoan,
       currentBalance,
     });
