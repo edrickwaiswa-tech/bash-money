@@ -6,7 +6,6 @@ import {
 } from "@workspace/api-client-react";
 import { formatCurrency, formatDate, formatTransactionType } from "@/lib/format";
 import { exportMemberStatementPDF } from "@/lib/pdf-export";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PinInput } from "@/components/pin-input";
 import { MemberAvatar } from "@/components/member-avatar";
@@ -19,7 +18,7 @@ import {
   Wallet, Landmark, LogOut, FileDown, TrendingUp, TrendingDown,
   User, Phone, CreditCard, Calendar, RefreshCw, Bell, BellOff,
   CheckCheck, ArrowUpCircle, ArrowDownCircle, Hash,
-  KeyRound, CheckCircle2, AlertCircle,
+  KeyRound, CheckCircle2, AlertCircle, ShieldCheck,
 } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -37,26 +36,27 @@ interface Notification {
 
 export function MemberPortal() {
   const [, navigate] = useLocation();
-  const [memberId, setMemberId]     = useState<number | null>(null);
+  const [memberId, setMemberId]       = useState<number | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
-  const [activeTab, setActiveTab]   = useState<"ledger" | "notifications" | "profile">("ledger");
+  const [activeTab, setActiveTab]     = useState<"ledger" | "notifications" | "profile">("ledger");
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount]     = useState(0);
   const [notifsLoading, setNotifsLoading] = useState(false);
+  const [avatarErr, setAvatarErr]         = useState(false);
 
   // Logout confirmation
-  const [showLogout, setShowLogout]   = useState(false);
-  const [loggingOut, setLoggingOut]   = useState(false);
+  const [showLogout, setShowLogout] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   // Change PIN state
-  const [cpCurrent, setCpCurrent]     = useState("");
-  const [cpNew, setCpNew]             = useState("");
-  const [cpConfirm, setCpConfirm]     = useState("");
-  const [cpLoading, setCpLoading]     = useState(false);
-  const [cpError, setCpError]         = useState("");
+  const [cpCurrent, setCpCurrent]       = useState("");
+  const [cpNew, setCpNew]               = useState("");
+  const [cpConfirm, setCpConfirm]       = useState("");
+  const [cpLoading, setCpLoading]       = useState(false);
+  const [cpError, setCpError]           = useState("");
   const [cpCurrentErr, setCpCurrentErr] = useState(false);
-  const [cpSuccess, setCpSuccess]     = useState(false);
+  const [cpSuccess, setCpSuccess]       = useState(false);
 
   useEffect(() => {
     fetch(`${BASE}/api/auth/member/me`, { credentials: "same-origin" })
@@ -71,10 +71,7 @@ export function MemberPortal() {
 
   const fetchUnreadCount = useCallback(async () => {
     const r = await fetch(`${BASE}/api/member/notifications/unread-count`, { credentials: "same-origin" });
-    if (r.ok) {
-      const d = await r.json();
-      setUnreadCount(d.count ?? 0);
-    }
+    if (r.ok) { const d = await r.json(); setUnreadCount(d.count ?? 0); }
   }, []);
 
   const fetchNotifications = useCallback(async () => {
@@ -89,9 +86,7 @@ export function MemberPortal() {
   }, []);
 
   const markAllRead = async () => {
-    await fetch(`${BASE}/api/member/notifications/read-all`, {
-      method: "PATCH", credentials: "same-origin",
-    });
+    await fetch(`${BASE}/api/member/notifications/read-all`, { method: "PATCH", credentials: "same-origin" });
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnreadCount(0);
   };
@@ -118,9 +113,7 @@ export function MemberPortal() {
   const handleLogoutConfirmed = async () => {
     setLoggingOut(true);
     try {
-      await fetch(`${BASE}/api/auth/member/logout`, {
-        method: "POST", credentials: "same-origin",
-      });
+      await fetch(`${BASE}/api/auth/member/logout`, { method: "POST", credentials: "same-origin" });
       navigate("/login");
     } finally {
       setLoggingOut(false);
@@ -171,8 +164,7 @@ export function MemberPortal() {
 
   if (authLoading || profileLoading) {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center"
-        style={{ background: "linear-gradient(160deg, #f7f5f2 0%, #eef1f8 50%, #f0edf6 100%)" }}>
+      <div className="min-h-[100dvh] flex items-center justify-center bg-[#f4f6fb]">
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
           <RefreshCw className="w-6 h-6 animate-spin text-[#B03060]" />
           <p className="text-sm">Loading your account…</p>
@@ -183,6 +175,10 @@ export function MemberPortal() {
 
   if (!profile) return null;
 
+  const photoUrl    = (profile as any).profilePictureUrl ?? null;
+  const accountNo   = (profile as any).accountNumber ?? null;
+  const initials    = profile.name.trim().split(/\s+/).map((n: string) => n[0]?.toUpperCase() ?? "").slice(0, 2).join("");
+
   const tabs = [
     { key: "ledger"        as const, label: "Transactions" },
     { key: "notifications" as const, label: "Alerts",  badge: unreadCount },
@@ -190,36 +186,65 @@ export function MemberPortal() {
   ];
 
   return (
-    <div className="min-h-[100dvh] flex flex-col max-w-lg mx-auto"
-      style={{ background: "linear-gradient(160deg, #f7f5f2 0%, #eef1f8 50%, #f0edf6 100%)" }}>
+    <div className="min-h-[100dvh] flex flex-col max-w-lg mx-auto bg-[#f4f6fb]">
 
-      {/* ── Header — white, logo top-left, burgundy stripe ── */}
+      {/* ── Header — white, logo + member pill (mirrors admin layout) ── */}
       <header
         className="sticky top-0 z-30 bg-white border-b border-gray-100"
-        style={{ boxShadow: "0 2px 12px rgba(15,37,87,0.07)" }}
+        style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}
       >
-        <div className="flex items-center justify-between px-4 h-[64px]">
-          {/* Logo */}
-          <BmmLogo size="md" />
+        <div className="flex items-center justify-between px-4 h-[76px]">
+          {/* Logo — same nav size as admin */}
+          <BmmLogo size="nav" />
 
           <div className="flex items-center gap-2">
             {/* Notification bell */}
             {unreadCount > 0 && (
               <button
                 onClick={() => setActiveTab("notifications")}
-                className="relative text-gray-500 hover:text-[#B03060] transition-colors p-1.5"
+                className="relative text-gray-400 hover:text-[#B03060] transition-colors p-1.5"
               >
-                <Bell className="w-4.5 h-4.5" />
+                <Bell className="w-5 h-5" />
                 <span className="absolute -top-0.5 -right-0.5 bg-[#B03060] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               </button>
             )}
 
-            {/* Sign out → confirmation modal */}
+            {/* Member identity pill — mirrors admin layout exactly */}
+            <button
+              onClick={() => setActiveTab("profile")}
+              className="flex items-center gap-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-full pl-3 pr-1.5 py-1 cursor-pointer transition-colors"
+            >
+              <div className="leading-none text-right">
+                <p className="text-[11px] font-black text-[#1A1A1A] leading-tight truncate max-w-[90px]">
+                  {profile.name.split(" ")[0]}
+                </p>
+                {accountNo && (
+                  <p className="text-[9px] text-gray-400 leading-tight mt-0.5 font-mono tracking-wide">
+                    {accountNo}
+                  </p>
+                )}
+              </div>
+              <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-[#B03060]/10 border-2 border-[#B03060]/30 flex items-center justify-center">
+                {photoUrl && !avatarErr ? (
+                  <img
+                    src={photoUrl}
+                    alt={profile.name}
+                    className="w-full h-full object-cover"
+                    onError={() => setAvatarErr(true)}
+                  />
+                ) : (
+                  <span className="text-[10px] font-black text-[#B03060]">{initials}</span>
+                )}
+              </div>
+            </button>
+
+            {/* Sign out */}
             <button
               onClick={() => setShowLogout(true)}
-              className="flex items-center gap-1.5 text-gray-400 hover:text-[#B03060] hover:bg-[#B03060]/5 px-2.5 py-1.5 rounded-lg transition-colors text-xs font-semibold"
+              className="flex items-center gap-1.5 text-gray-400 hover:text-[#B03060] hover:bg-[#B03060]/5 px-2 py-1.5 rounded-lg transition-colors text-xs font-semibold"
+              title="Sign out"
             >
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Sign out</span>
@@ -230,70 +255,40 @@ export function MemberPortal() {
 
       <main className="flex-1 px-4 py-5 space-y-4 pb-10">
 
-        {/* ── Welcome banner ── */}
-        <div
-          className="bg-white rounded-2xl px-4 py-4 flex items-center gap-3 border border-gray-100"
-          style={{ boxShadow: "0 2px 12px rgba(15,37,87,0.06)" }}
-        >
-          <MemberAvatar
-            name={profile.name}
-            photoUrl={(profile as any).profilePictureUrl}
-            size="lg"
-          />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-gray-500 font-medium">Welcome back</p>
-            <h1 className="text-base font-black text-[#1A1A1A] leading-tight truncate">{profile.name}</h1>
-            {(profile as any).accountNumber && (
-              <p className="text-[10px] font-mono text-[#c9a144] font-bold mt-0.5 flex items-center gap-0.5">
-                <Hash className="w-2.5 h-2.5" />{(profile as any).accountNumber}
-              </p>
-            )}
-          </div>
-        </div>
-
         {/* ── Balance Cards ── */}
         <div className="grid grid-cols-2 gap-3">
-          {/* Total Savings — burgundy accent */}
-          <div
-            className="bg-white rounded-2xl p-4 border-2 border-[#B03060]/20"
-            style={{ boxShadow: "0 2px 12px rgba(176,48,96,0.07)" }}
-          >
-            <div className="flex items-center gap-1.5 mb-2">
-              <div className="w-6 h-6 rounded-lg bg-[#B03060]/8 flex items-center justify-center">
-                <Wallet className="h-3 w-3 text-[#B03060]" />
+          {/* Total Savings */}
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+            <div className="flex items-center gap-1.5 mb-3">
+              <div className="w-7 h-7 rounded-xl bg-[#B03060]/8 flex items-center justify-center">
+                <Wallet className="h-3.5 w-3.5 text-[#B03060]" />
               </div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#B03060]">Total Savings</span>
             </div>
-            <span className="text-lg font-black text-[#1A1A1A] leading-tight block">
+            <span className="text-xl font-black text-[#1A1A1A] leading-tight block">
               {formatCurrency(profile.totalSavings)}
             </span>
           </div>
 
-          {/* Loan Balance — red accent */}
-          <div
-            className="bg-white rounded-2xl p-4 border-2 border-red-200"
-            style={{ boxShadow: "0 2px 12px rgba(220,38,38,0.06)" }}
-          >
-            <div className="flex items-center gap-1.5 mb-2">
-              <div className="w-6 h-6 rounded-lg bg-red-50 flex items-center justify-center">
-                <Landmark className="h-3 w-3 text-red-500" />
+          {/* Loan Balance */}
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+            <div className="flex items-center gap-1.5 mb-3">
+              <div className="w-7 h-7 rounded-xl bg-[#B03060]/8 flex items-center justify-center">
+                <Landmark className="h-3.5 w-3.5 text-[#B03060]" />
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-red-500">Loan Balance</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#B03060]">Loan Balance</span>
             </div>
-            <span className="text-lg font-black text-red-500 leading-tight block">
+            <span className="text-xl font-black text-[#1A1A1A] leading-tight block">
               {formatCurrency(profile.outstandingLoan)}
             </span>
           </div>
         </div>
 
-        {/* ── Net Balance — white card, burgundy total ── */}
-        <div
-          className="bg-white rounded-2xl px-4 py-4 border border-[#B03060]/15 flex items-center justify-between"
-          style={{ boxShadow: "0 2px 12px rgba(176,48,96,0.08)" }}
-        >
+        {/* ── Net Balance ── */}
+        <div className="bg-white rounded-2xl px-5 py-4 border border-gray-100 shadow-sm flex items-center justify-between">
           <div>
-            <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wider mb-0.5">Net Balance</p>
-            <p className={`text-2xl font-black leading-tight ${profile.currentBalance >= 0 ? "text-[#B03060]" : "text-red-500"}`}>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Net Balance</p>
+            <p className={`text-2xl font-black leading-tight ${profile.currentBalance >= 0 ? "text-[#B03060]" : "text-destructive"}`}>
               {formatCurrency(profile.currentBalance)}
             </p>
           </div>
@@ -304,7 +299,7 @@ export function MemberPortal() {
                   <TrendingUp className="w-3 h-3" />
                   +{formatCurrency(ledger.totalCredits)}
                 </span>
-                <span className="flex items-center gap-1 text-red-500 font-bold">
+                <span className="flex items-center gap-1 text-gray-500 font-bold">
                   <TrendingDown className="w-3 h-3" />
                   -{formatCurrency(ledger.totalDebits)}
                 </span>
@@ -314,8 +309,7 @@ export function MemberPortal() {
         </div>
 
         {/* ── Tabs — burgundy active ── */}
-        <div className="flex gap-1 bg-white rounded-xl p-1 border border-gray-100"
-          style={{ boxShadow: "0 2px 8px rgba(15,37,87,0.05)" }}>
+        <div className="flex gap-1 bg-white rounded-xl p-1 border border-gray-100 shadow-sm">
           {tabs.map((tab) => (
             <button
               key={tab.key}
@@ -342,7 +336,7 @@ export function MemberPortal() {
         {/* ── TRANSACTIONS TAB ── */}
         {activeTab === "ledger" && (
           <div className="space-y-3">
-            <div className="flex justify-between items-center px-1">
+            <div className="flex justify-between items-center">
               <h2 className="font-black text-sm text-[#1A1A1A]">Transaction History</h2>
               <button
                 onClick={handleExportPDF}
@@ -355,10 +349,7 @@ export function MemberPortal() {
               </button>
             </div>
 
-            <div
-              className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
-              style={{ boxShadow: "0 2px 12px rgba(15,37,87,0.06)" }}
-            >
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               {ledgerLoading ? (
                 <div className="p-8 text-center text-sm text-gray-400">
                   <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2 text-[#B03060]" />
@@ -387,12 +378,12 @@ export function MemberPortal() {
                         {entry.direction === "credit" ? "+" : "-"}{formatCurrency(entry.amount)}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center text-xs text-gray-500 pl-9">
+                    <div className="flex justify-between items-center text-xs text-gray-400 pl-9">
                       <span>{formatDate(entry.createdAt)}</span>
                       <span>Bal: <span className={`font-black ${entry.runningBalance >= 0 ? "text-[#1A1A1A]" : "text-red-500"}`}>{formatCurrency(entry.runningBalance)}</span></span>
                     </div>
                     {entry.notes && (
-                      <div className="mt-2 pl-9 text-xs text-gray-500 bg-gray-50 px-2 py-1.5 rounded-lg">{entry.notes}</div>
+                      <div className="mt-2 pl-9 text-xs text-gray-400 bg-gray-50 px-2 py-1.5 rounded-lg">{entry.notes}</div>
                     )}
                   </div>
                 ))
@@ -404,7 +395,7 @@ export function MemberPortal() {
         {/* ── NOTIFICATIONS TAB ── */}
         {activeTab === "notifications" && (
           <div className="space-y-3">
-            <div className="flex justify-between items-center px-1">
+            <div className="flex justify-between items-center">
               <h2 className="font-black text-sm text-[#1A1A1A]">Account Alerts</h2>
               {unreadCount > 0 && (
                 <button onClick={markAllRead} className="flex items-center gap-1 text-xs text-[#B03060] hover:underline font-bold">
@@ -420,13 +411,10 @@ export function MemberPortal() {
                 Loading alerts…
               </div>
             ) : notifications.length === 0 ? (
-              <div
-                className="flex flex-col items-center justify-center py-12 gap-3 text-gray-400 bg-white rounded-2xl border border-gray-100"
-                style={{ boxShadow: "0 2px 12px rgba(15,37,87,0.06)" }}
-              >
+              <div className="flex flex-col items-center justify-center py-12 gap-3 text-gray-400 bg-white rounded-2xl border border-gray-100 shadow-sm">
                 <BellOff className="w-8 h-8 opacity-40" />
-                <p className="text-sm font-medium text-[#1A1A1A]">No alerts yet</p>
-                <p className="text-xs text-center max-w-[200px] text-gray-500">
+                <p className="text-sm font-bold text-[#1A1A1A]">No alerts yet</p>
+                <p className="text-xs text-center max-w-[200px] text-gray-400">
                   You'll be notified here whenever a transaction is posted to your account
                 </p>
               </div>
@@ -438,7 +426,6 @@ export function MemberPortal() {
                     className={`rounded-2xl border p-4 transition-colors ${
                       n.read ? "bg-white border-gray-100" : n.direction === "credit" ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"
                     }`}
-                    style={{ boxShadow: "0 1px 6px rgba(15,37,87,0.04)" }}
                   >
                     <div className="flex items-start gap-3">
                       <div className={`mt-0.5 flex-shrink-0 rounded-xl p-1.5 ${
@@ -478,65 +465,70 @@ export function MemberPortal() {
         {activeTab === "profile" && (
           <div className="space-y-3">
             {/* Profile card */}
-            <div
-              className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
-              style={{ boxShadow: "0 2px 12px rgba(15,37,87,0.06)" }}
-            >
-              <div className="p-4 space-y-4">
-                <div className="flex items-center gap-3 pb-3 border-b border-gray-50">
-                  <MemberAvatar
-                    name={profile.name}
-                    photoUrl={(profile as any).profilePictureUrl}
-                    size="lg"
-                  />
-                  <div>
-                    <p className="font-black text-[#1A1A1A]">{profile.name}</p>
-                    <p className="text-xs text-gray-500">Member Account</p>
-                  </div>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              {/* Profile header strip */}
+              <div
+                className="px-5 py-5 flex items-center gap-4"
+                style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
+              >
+                <div className="w-16 h-16 rounded-full overflow-hidden border-[3px] border-white/40 shadow-lg flex-shrink-0 bg-[#f9f0f3] flex items-center justify-center">
+                  {photoUrl && !avatarErr ? (
+                    <img src={photoUrl} alt={profile.name} className="w-full h-full object-cover" onError={() => setAvatarErr(true)} />
+                  ) : (
+                    <span className="text-xl font-black text-[#B03060]">{initials}</span>
+                  )}
                 </div>
-                <div className="space-y-3">
-                  {[
-                    { icon: User,       label: "Full Name",    value: profile.name },
-                    { icon: Phone,      label: "Phone Number", value: profile.phone },
-                    { icon: Hash,       label: "Account No.",  value: (profile as any).accountNumber ?? "—", mono: true },
-                    { icon: CreditCard, label: "Member ID",    value: profile.idNumber },
-                    { icon: Calendar,   label: "Member Since", value: formatDate(profile.joinDate) },
-                  ].map(({ icon: Icon, label, value, mono }) => (
-                    <div key={label} className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-[#B03060]/8 flex items-center justify-center flex-shrink-0">
-                        <Icon className="w-3.5 h-3.5 text-[#B03060]" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">{label}</p>
-                        <p className={`text-sm text-[#1A1A1A] truncate ${mono ? "font-mono font-black" : "font-semibold"}`}>{value}</p>
-                      </div>
+                <div className="min-w-0">
+                  <p className="text-white font-black text-base leading-tight truncate">{profile.name}</p>
+                  <p className="text-white/60 text-xs mt-0.5">Member Account</p>
+                  {accountNo && (
+                    <p className="text-white/70 text-[10px] font-mono font-bold mt-0.5 flex items-center gap-0.5">
+                      <Hash className="w-2.5 h-2.5" />{accountNo}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Account details */}
+              <div className="px-5 py-4 space-y-4">
+                {[
+                  { icon: User,       label: "Full Name",    value: profile.name },
+                  { icon: Phone,      label: "Phone Number", value: profile.phone },
+                  { icon: Hash,       label: "Account No.",  value: accountNo ?? "—", mono: true },
+                  { icon: CreditCard, label: "Member ID",    value: profile.idNumber },
+                  { icon: Calendar,   label: "Member Since", value: formatDate(profile.joinDate) },
+                ].map(({ icon: Icon, label, value, mono }) => (
+                  <div key={label} className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-[#B03060]/8 flex items-center justify-center flex-shrink-0">
+                      <Icon className="w-3.5 h-3.5 text-[#B03060]" />
                     </div>
-                  ))}
-                </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">{label}</p>
+                      <p className={`text-sm text-[#1A1A1A] truncate ${mono ? "font-mono font-black" : "font-semibold"}`}>{value}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
             {/* Change PIN card */}
-            <div
-              className="bg-white rounded-2xl border border-[#B03060]/15 overflow-hidden"
-              style={{ boxShadow: "0 2px 12px rgba(176,48,96,0.06)" }}
-            >
-              <div className="p-4 space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b border-gray-50">
-                  <div className="w-7 h-7 rounded-xl bg-[#B03060]/8 flex items-center justify-center flex-shrink-0">
-                    <KeyRound className="w-3.5 h-3.5 text-[#B03060]" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-[#1A1A1A] text-sm">Security — Change PIN</p>
-                    <p className="text-[10px] text-gray-500">Update your 4-digit login PIN</p>
-                  </div>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-50 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-xl bg-[#B03060]/8 flex items-center justify-center flex-shrink-0">
+                  <KeyRound className="w-3.5 h-3.5 text-[#B03060]" />
                 </div>
+                <div>
+                  <p className="font-bold text-[#1A1A1A] text-sm">Security — Change PIN</p>
+                  <p className="text-[10px] text-gray-400">Update your 4-digit login PIN</p>
+                </div>
+              </div>
 
+              <div className="px-5 py-5 space-y-4">
                 {cpSuccess ? (
                   <div className="flex flex-col items-center gap-2 py-4">
                     <CheckCircle2 className="w-10 h-10 text-emerald-500" />
                     <p className="text-sm font-bold text-emerald-700">PIN changed successfully!</p>
-                    <p className="text-xs text-gray-500 text-center">Use your new PIN next time you sign in.</p>
+                    <p className="text-xs text-gray-400 text-center">Use your new PIN next time you sign in.</p>
                   </div>
                 ) : (
                   <>
@@ -596,19 +588,23 @@ export function MemberPortal() {
         )}
       </main>
 
+      {/* Branding footer */}
+      <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-400 py-3 pb-6">
+        <ShieldCheck className="w-3 h-3 text-[#B03060] flex-shrink-0" />
+        <span>Bash M. Money And Financial Services Ltd — Secured &amp; Encrypted</span>
+      </div>
+
       {/* ── Logout confirmation modal ── */}
       <Dialog open={showLogout} onOpenChange={(open) => !loggingOut && setShowLogout(open)}>
         <DialogContent
           className="rounded-3xl border-0 p-0 overflow-hidden max-w-[320px] mx-auto"
-          style={{ boxShadow: "0 24px 64px rgba(15,37,87,0.18)" }}
+          style={{ boxShadow: "0 24px 64px rgba(0,0,0,0.15)" }}
         >
           <div className="px-6 pt-7 pb-5 text-center">
             <div className="w-14 h-14 rounded-2xl bg-[#B03060]/8 flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="w-7 h-7 text-[#B03060]" />
             </div>
-            <DialogTitle className="text-[#1A1A1A] font-black text-lg leading-tight">
-              Sign out?
-            </DialogTitle>
+            <DialogTitle className="text-[#1A1A1A] font-black text-lg leading-tight">Sign out?</DialogTitle>
             <p className="text-gray-500 text-sm mt-2 leading-relaxed">
               Are you sure you want to log out of your account?
             </p>
