@@ -26,7 +26,7 @@ export function Loans() {
       <div className="px-4 pt-6 pb-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[22px] font-black text-[#0f2557] leading-tight">Loans</h1>
+            <h1 className="text-[22px] font-black text-[#1A1A1A] leading-tight">Loans</h1>
             <p className="text-gray-400 text-xs mt-0.5">Active loan portfolio</p>
           </div>
           <Button
@@ -54,7 +54,7 @@ export function Loans() {
           <div className="bg-white rounded-2xl p-4 border border-gray-100"
             style={{ boxShadow: "0 2px 12px rgba(15,37,87,0.06)" }}>
             <p className="text-gray-400 text-[9px] uppercase tracking-widest font-semibold mb-1">Repayment Rate</p>
-            <p className="text-[#c9a144] font-black text-lg leading-tight">{repaymentRate.toFixed(1)}%</p>
+            <p className="text-[#B03060] font-black text-lg leading-tight">{repaymentRate.toFixed(1)}%</p>
             <p className="text-gray-400 text-[10px] mt-1">{formatCurrency(totalRepaid)} repaid</p>
           </div>
         </div>
@@ -85,7 +85,7 @@ export function Loans() {
             <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-4">
               <Landmark className="w-8 h-8 text-gray-300" />
             </div>
-            <h3 className="font-bold text-[#0f2557] text-base mb-1">No Active Loans</h3>
+            <h3 className="font-bold text-[#1A1A1A] text-base mb-1">No Active Loans</h3>
             <p className="text-gray-400 text-sm mb-5 leading-relaxed">
               No members currently have an outstanding loan balance.
             </p>
@@ -116,11 +116,11 @@ export function Loans() {
                   <div key={loan.memberId} className="px-4 py-4">
                     {/* Top row */}
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-[#0f2557]/5 flex items-center justify-center flex-shrink-0">
-                        <User className="w-5 h-5 text-[#0f2557]/50" />
+                      <div className="w-10 h-10 rounded-2xl bg-[#B03060]/8 flex items-center justify-center flex-shrink-0">
+                        <User className="w-5 h-5 text-[#B03060]/60" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-[#0f2557] text-sm leading-tight truncate">{loan.memberName}</p>
+                        <p className="font-bold text-[#1A1A1A] text-sm leading-tight truncate">{loan.memberName}</p>
                         <p className="text-[11px] text-gray-400 font-mono mt-0.5">{loan.accountNumber}</p>
                       </div>
                       <div className="text-right flex-shrink-0">
