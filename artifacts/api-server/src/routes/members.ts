@@ -2,7 +2,6 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { membersTable, transactionsTable, CREDIT_TYPES } from "@workspace/db";
 import { eq, like, or, asc } from "drizzle-orm";
-import { calcOutstandingLoan } from "../lib/loan-calc";
 import {
   CreateMemberBody,
   UpdateMemberBody,
@@ -55,22 +54,16 @@ router.get("/members", requireAdmin, async (req, res) => {
 
     const result = members.map((m) => {
       const txs = txsByMember.get(m.id) ?? [];
-      let totalCredits = 0;
-      let totalDebits = 0;
-      let savingsDeposits = 0;
-      let withdrawals = 0;
+      let totalSavings = 0;
+      let loanDisbursements = 0;
+      let loanRepayments = 0;
       for (const tx of txs) {
         const amt = parseFloat(tx.amount);
-        if (CREDIT_TYPES.includes(tx.type as any)) {
-          totalCredits += amt;
-          if (tx.type === "SAVINGS_DEPOSIT") savingsDeposits += amt;
-        } else {
-          totalDebits += amt;
-          if (tx.type === "WITHDRAWAL") withdrawals += amt;
-        }
+        if (tx.type === "SAVINGS_DEPOSIT") totalSavings += amt;
+        else if (tx.type === "LOAN_DISBURSEMENT") loanDisbursements += amt;
+        else if (tx.type === "LOAN_REPAYMENT") loanRepayments += amt;
       }
-      const totalSavings = Math.max(0, savingsDeposits - withdrawals);
-      const outstandingLoan = calcOutstandingLoan(txs);
+      const outstandingLoan = Math.max(0, loanDisbursements - loanRepayments);
       return {
         ...m,
         createdAt: m.createdAt.toISOString(),
@@ -128,25 +121,22 @@ router.get("/members/:memberId", async (req, res) => {
       .where(eq(transactionsTable.memberId, memberId))
       .orderBy(asc(transactionsTable.createdAt));
 
-    let totalCredits = 0;
-    let totalDebits = 0;
-    let savingsDeposits = 0;
-    let withdrawals = 0;
+    let totalSavings = 0;
+    let loanDisbursements = 0;
+    let loanRepayments = 0;
 
     for (const tx of txs) {
       const amt = parseFloat(tx.amount);
-      if (CREDIT_TYPES.includes(tx.type as any)) {
-        totalCredits += amt;
-        if (tx.type === "SAVINGS_DEPOSIT") savingsDeposits += amt;
-      } else {
-        totalDebits += amt;
-        if (tx.type === "WITHDRAWAL") withdrawals += amt;
-      }
+      if (tx.type === "SAVINGS_DEPOSIT") totalSavings += amt;
+      else if (tx.type === "LOAN_DISBURSEMENT") loanDisbursements += amt;
+      else if (tx.type === "LOAN_REPAYMENT") loanRepayments += amt;
     }
 
-    // Running-balance loan calc: over-repayments cap at 0, never cancel future disbursements
-    const totalSavings = Math.max(0, savingsDeposits - withdrawals);
-    const outstandingLoan = calcOutstandingLoan(txs);
+    // Standardised formulas:
+    // Total Savings  = sum of SAVINGS_DEPOSIT
+    // Loan Balance   = sum of LOAN_DISBURSEMENT − sum of LOAN_REPAYMENT (min 0)
+    // Net Balance    = Total Savings − Loan Balance
+    const outstandingLoan = Math.max(0, loanDisbursements - loanRepayments);
     const currentBalance = totalSavings - outstandingLoan;
 
     res.json({
