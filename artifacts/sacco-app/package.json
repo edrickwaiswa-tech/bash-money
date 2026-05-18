@@ -76,6 +76,9 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "react-easy-crop": "^5.5.7"

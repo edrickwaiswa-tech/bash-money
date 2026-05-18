@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Bash M. Money</string>
+    <string name="title_activity_main">Bash M. Money</string>
+    <string name="package_name">com.bashmmoney.app</string>
+    <string name="custom_url_scheme">com.bashmmoney.app</string>
+</resources>
