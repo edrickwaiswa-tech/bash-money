@@ -56,7 +56,11 @@ export function MemberLogin() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Incorrect code"); setOtp(""); return; }
-      navigate("/my-account/portal");
+      if (data.requiresPasswordReset) {
+        navigate("/my-account/force-set-pin");
+      } else {
+        navigate("/my-account/portal");
+      }
     } catch {
       setError("Network error. Please try again.");
     } finally {

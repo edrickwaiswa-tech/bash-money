@@ -62,8 +62,15 @@ export function MemberPortal() {
     fetch(`${BASE}/api/auth/member/me`, { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (data?.memberId) setMemberId(data.memberId);
-        else navigate("/login");
+        if (data?.memberId) {
+          if (data.requiresPasswordReset) {
+            navigate("/my-account/force-set-pin");
+          } else {
+            setMemberId(data.memberId);
+          }
+        } else {
+          navigate("/login");
+        }
       })
       .catch(() => navigate("/login"))
       .finally(() => setAuthLoading(false));

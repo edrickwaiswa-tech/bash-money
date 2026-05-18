@@ -22,7 +22,7 @@ import {
   ArrowLeft, Wallet, Landmark, Phone, CreditCard,
   Calendar, Edit, Trash2, FileDown, Camera,
   Copy, Check, Hash, ImageIcon, Pen, Upload, X,
-  ShieldCheck, Lock
+  ShieldCheck, Lock, KeyRound
 } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -64,6 +64,9 @@ export function MemberDetail() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isResettingPin, setIsResettingPin] = useState(false);
+  const [showTempPwModal, setShowTempPwModal] = useState(false);
+  const [tempPassword, setTempPassword] = useState("");
+  const [isSettingTempPw, setIsSettingTempPw] = useState(false);
   const [editData, setEditData] = useState({ name: "", phone: "", idNumber: "" });
   const [isExporting, setIsExporting] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -121,6 +124,31 @@ export function MemberDetail() {
       toast.error(err.message ?? "Failed to reset PIN");
     } finally {
       setIsResettingPin(false);
+    }
+  };
+
+  const handleSetTempPassword = async () => {
+    if (!tempPassword.trim() || tempPassword.trim().length < 4) {
+      toast.error("Temporary password must be at least 4 characters");
+      return;
+    }
+    setIsSettingTempPw(true);
+    try {
+      const res = await fetch(`${BASE}/api/auth/member/${memberId}/set-temp-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ temporaryPassword: tempPassword.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success("Temporary password set. Member will be prompted to create a new PIN on their next login.");
+      setShowTempPwModal(false);
+      setTempPassword("");
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to set temporary password");
+    } finally {
+      setIsSettingTempPw(false);
     }
   };
 
@@ -580,7 +608,7 @@ export function MemberDetail() {
                 </div>
                 <div>
                   <h3 className="font-bold text-[#1A1A1A] text-sm">Member PIN</h3>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">Reset the member's self-service login PIN</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Clear the member's PIN so they re-set it via OTP</p>
                 </div>
               </div>
               <div className="px-5 py-4 space-y-3">
@@ -594,8 +622,34 @@ export function MemberDetail() {
                   disabled={isResettingPin}
                 >
                   <Lock className="h-3.5 w-3.5" />
-                  {isResettingPin ? "Resetting…" : "Reset Member PIN"}
+                  {isResettingPin ? "Clearing…" : "Clear Member PIN"}
                 </Button>
+              </div>
+            </div>
+
+            {/* Admin Override — Set Temporary Password */}
+            <div className="bg-white rounded-2xl shadow-sm border border-[#B03060]/20 overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-50 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#B03060]/8 flex items-center justify-center flex-shrink-0">
+                  <KeyRound className="w-3.5 h-3.5 text-[#B03060]" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-[#1A1A1A] text-sm">Reset Member Password</h3>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Set a temporary password — member must change it on next login</p>
+                </div>
+              </div>
+              <div className="px-5 py-4 space-y-3">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Use this when a member cannot access their account. Set a temporary password they can use to log in, then they will be immediately prompted to create a new private PIN before seeing their dashboard.
+                </p>
+                <button
+                  className="w-full gap-2 h-10 rounded-xl border text-sm font-semibold transition-all flex items-center justify-center text-white disabled:opacity-50"
+                  style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
+                  onClick={() => setShowTempPwModal(true)}
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                  Reset Member Password
+                </button>
               </div>
             </div>
           </TabsContent>
@@ -721,6 +775,68 @@ export function MemberDetail() {
             <Button variant="outline" onClick={() => setIsDeleteOpen(false)} className="rounded-xl">Cancel</Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleteMember.isPending} className="rounded-xl">
               {deleteMember.isPending ? "Deleting…" : "Delete Member"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Temp Password Modal */}
+      <Dialog open={showTempPwModal} onOpenChange={(open) => { if (!isSettingTempPw) { setShowTempPwModal(open); if (!open) setTempPassword(""); } }}>
+        <DialogContent
+          className="rounded-3xl border-0 p-0 overflow-hidden max-w-[340px] mx-auto"
+          style={{ boxShadow: "0 24px 64px rgba(0,0,0,0.15)" }}
+        >
+          <div className="px-6 pt-7 pb-2">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-[#B03060]/8 flex items-center justify-center flex-shrink-0">
+                <KeyRound className="w-5 h-5 text-[#B03060]" />
+              </div>
+              <div>
+                <DialogTitle className="text-[#1A1A1A] font-black text-base leading-tight">Reset Member Password</DialogTitle>
+                <p className="text-[11px] text-muted-foreground mt-0.5">{profile.name}</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed mb-5">
+              Enter a temporary password for this member. They will be required to create a new private PIN the next time they sign in — they cannot access their dashboard until they do.
+            </p>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Temporary Password
+              </Label>
+              <Input
+                type="text"
+                placeholder="e.g. Welcome2026!"
+                value={tempPassword}
+                onChange={(e) => setTempPassword(e.target.value)}
+                disabled={isSettingTempPw}
+                autoFocus
+                className="rounded-xl border-[#B03060]/20 focus-visible:ring-[#B03060] h-11 font-mono tracking-wider"
+                onKeyDown={(e) => { if (e.key === "Enter") handleSetTempPassword(); }}
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">Min 4 characters — share this privately with the member</p>
+            </div>
+          </div>
+          <DialogFooter className="flex-col gap-2 px-6 pb-6 pt-4">
+            <button
+              onClick={handleSetTempPassword}
+              disabled={isSettingTempPw || tempPassword.trim().length < 4}
+              className="w-full h-11 rounded-2xl text-white font-bold text-sm transition-all disabled:opacity-50"
+              style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
+            >
+              {isSettingTempPw ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  Saving…
+                </span>
+              ) : "Set Temporary Password"}
+            </button>
+            <Button
+              variant="outline"
+              className="w-full h-10 rounded-2xl border-gray-200 text-gray-500 font-semibold text-sm"
+              onClick={() => { setShowTempPwModal(false); setTempPassword(""); }}
+              disabled={isSettingTempPw}
+            >
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>

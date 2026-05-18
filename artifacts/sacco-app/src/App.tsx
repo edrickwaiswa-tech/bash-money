@@ -14,6 +14,7 @@ import { MemberDetail } from "@/pages/members/[id]";
 import { NewTransaction } from "@/pages/transactions/new";
 import { MemberLogin } from "@/pages/member-login";
 import { MemberPortal } from "@/pages/member-portal";
+import { ForceSetPin } from "@/pages/force-set-pin";
 import { SecuritySettings } from "@/pages/security-settings";
 import { AdminProfile } from "@/pages/admin-profile";
 import { Reports } from "@/pages/reports";
@@ -31,6 +32,7 @@ function Router() {
       {/* Legacy member login redirect → unified login */}
       <Route path="/my-account" component={MemberLogin} />
       <Route path="/my-account/portal" component={MemberPortal} />
+      <Route path="/my-account/force-set-pin" component={ForceSetPin} />
 
       {/* All other routes get the layout */}
       <Route>
