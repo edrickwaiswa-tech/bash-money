@@ -48,18 +48,14 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Service Worker registration — runs after the page loads -->
+    <!-- Service Worker: actively unregister all workers and clear caches to prevent stale blank screens -->
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function () {
-          navigator.serviceWorker
-            .register('/sw.js')
-            .then(function (reg) {
-              console.log('[BMMFS] Service worker registered. Scope:', reg.scope);
-            })
-            .catch(function (err) {
-              console.warn('[BMMFS] Service worker registration failed:', err);
-            });
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (var reg of registrations) { reg.unregister(); }
+        });
+        caches.keys().then(function(keys) {
+          keys.forEach(function(key) { caches.delete(key); });
         });
       }
     </script>
