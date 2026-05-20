@@ -74,6 +74,31 @@ router.post("/transactions", requireAdmin, async (req, res) => {
       return;
     }
 
+    // ── Overdraft guard ────────────────────────────────────────────────────────
+    if (body.type === "WITHDRAWAL") {
+      const existingTxs = await db
+        .select()
+        .from(transactionsTable)
+        .where(eq(transactionsTable.memberId, body.memberId));
+
+      let savingsDeposits = 0;
+      let withdrawals = 0;
+      for (const t of existingTxs) {
+        const amt = parseFloat(t.amount);
+        if (t.type === "SAVINGS_DEPOSIT") savingsDeposits += amt;
+        else if (t.type === "WITHDRAWAL") withdrawals += amt;
+      }
+      const currentSavings = Math.max(0, savingsDeposits - withdrawals);
+
+      if (body.amount > currentSavings) {
+        res.status(400).json({
+          error: "Incomplete transaction: Insufficient savings balance.",
+        });
+        return;
+      }
+    }
+    // ──────────────────────────────────────────────────────────────────────────
+
     const transactionRef = generateRef();
     const [tx] = await db
       .insert(transactionsTable)

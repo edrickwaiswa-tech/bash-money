@@ -54,15 +54,18 @@ router.get("/members", requireAdmin, async (req, res) => {
 
     const result = members.map((m) => {
       const txs = txsByMember.get(m.id) ?? [];
-      let totalSavings = 0;
+      let savingsDeposits = 0;
+      let savingsWithdrawals = 0;
       let loanDisbursements = 0;
       let loanRepayments = 0;
       for (const tx of txs) {
         const amt = parseFloat(tx.amount);
-        if (tx.type === "SAVINGS_DEPOSIT") totalSavings += amt;
+        if (tx.type === "SAVINGS_DEPOSIT") savingsDeposits += amt;
+        else if (tx.type === "WITHDRAWAL") savingsWithdrawals += amt;
         else if (tx.type === "LOAN_DISBURSEMENT") loanDisbursements += amt;
         else if (tx.type === "LOAN_REPAYMENT") loanRepayments += amt;
       }
+      const totalSavings = Math.max(0, savingsDeposits - savingsWithdrawals);
       const outstandingLoan = Math.max(0, loanDisbursements - loanRepayments);
       return {
         ...m,
@@ -121,21 +124,24 @@ router.get("/members/:memberId", async (req, res) => {
       .where(eq(transactionsTable.memberId, memberId))
       .orderBy(asc(transactionsTable.createdAt));
 
-    let totalSavings = 0;
+    let savingsDeposits = 0;
+    let savingsWithdrawals = 0;
     let loanDisbursements = 0;
     let loanRepayments = 0;
 
     for (const tx of txs) {
       const amt = parseFloat(tx.amount);
-      if (tx.type === "SAVINGS_DEPOSIT") totalSavings += amt;
+      if (tx.type === "SAVINGS_DEPOSIT") savingsDeposits += amt;
+      else if (tx.type === "WITHDRAWAL") savingsWithdrawals += amt;
       else if (tx.type === "LOAN_DISBURSEMENT") loanDisbursements += amt;
       else if (tx.type === "LOAN_REPAYMENT") loanRepayments += amt;
     }
 
     // Standardised formulas:
-    // Total Savings  = sum of SAVINGS_DEPOSIT
-    // Loan Balance   = sum of LOAN_DISBURSEMENT − sum of LOAN_REPAYMENT (min 0)
+    // Total Savings  = SAVINGS_DEPOSIT − WITHDRAWAL  (min 0)
+    // Loan Balance   = LOAN_DISBURSEMENT − LOAN_REPAYMENT  (min 0)
     // Net Balance    = Total Savings − Loan Balance
+    const totalSavings = Math.max(0, savingsDeposits - savingsWithdrawals);
     const outstandingLoan = Math.max(0, loanDisbursements - loanRepayments);
     const currentBalance = totalSavings - outstandingLoan;
 

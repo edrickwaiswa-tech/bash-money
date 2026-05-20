@@ -23,9 +23,10 @@ router.get("/dashboard/summary", requireAdmin, async (req, res) => {
     today.setHours(0, 0, 0, 0);
 
     // Standardised formulas (mirrors member-level calculations):
-    // Total Savings        = sum of all SAVINGS_DEPOSIT
-    // Total Loans Out      = sum of LOAN_DISBURSEMENT − sum of LOAN_REPAYMENT per member (min 0 per member)
-    let totalSavings = 0;
+    // Total Savings        = SAVINGS_DEPOSIT − WITHDRAWAL  (global, min 0)
+    // Total Loans Out      = LOAN_DISBURSEMENT − LOAN_REPAYMENT per member (min 0 per member)
+    let totalSavingsDeposits = 0;
+    let totalSavingsWithdrawals = 0;
     let totalDepositsToday = 0;
     let totalWithdrawalsToday = 0;
 
@@ -38,9 +39,10 @@ router.get("/dashboard/summary", requireAdmin, async (req, res) => {
       const isToday = tx.createdAt >= today;
 
       if (tx.type === "SAVINGS_DEPOSIT") {
-        totalSavings += amt;
+        totalSavingsDeposits += amt;
         if (isToday) totalDepositsToday += amt;
       } else if (tx.type === "WITHDRAWAL") {
+        totalSavingsWithdrawals += amt;
         if (isToday) totalWithdrawalsToday += amt;
       } else if (tx.type === "LOAN_DISBURSEMENT") {
         memberDisbursements.set(tx.memberId, (memberDisbursements.get(tx.memberId) ?? 0) + amt);
@@ -57,6 +59,8 @@ router.get("/dashboard/summary", requireAdmin, async (req, res) => {
       const repaid = memberRepayments.get(mid) ?? 0;
       totalLoansOutstanding += Math.max(0, disbursed - repaid);
     }
+
+    const totalSavings = Math.max(0, totalSavingsDeposits - totalSavingsWithdrawals);
 
     res.json({
       totalMembers,
