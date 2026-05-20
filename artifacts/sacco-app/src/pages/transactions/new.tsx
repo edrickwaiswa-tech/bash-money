@@ -16,8 +16,10 @@ import { toast } from "sonner";
 import {
   Users, DollarSign, FileText, ArrowRightLeft,
   Share2, CheckCircle2, Landmark, ArrowDownToLine,
-  ArrowUpFromLine, ArrowUpCircle, ChevronDown,
+  ArrowUpFromLine, ArrowUpCircle, ChevronDown, PiggyBank,
 } from "lucide-react";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 // ── Transaction type metadata ─────────────────────────────────────────────────
 const TX_TYPES: {
@@ -72,26 +74,32 @@ export function NewTransaction() {
   const initialMemberId = searchParams.get("memberId");
   const initialType = (searchParams.get("type") as CreateTransactionBodyType) || "SAVINGS_DEPOSIT";
 
-  const [memberId, setMemberId]   = useState<string>(initialMemberId || "");
-  const [type,     setType]       = useState<CreateTransactionBodyType>(initialType);
-  const [amount,   setAmount]     = useState<string>("");
-  const [notes,    setNotes]      = useState<string>("");
-  const [receipt,  setReceipt]    = useState<TransactionReceipt | null>(null);
+  const [memberId,       setMemberId]       = useState<string>(initialMemberId || "");
+  const [type,           setType]           = useState<CreateTransactionBodyType>(initialType);
+  const [amount,         setAmount]         = useState<string>("");
+  const [notes,          setNotes]          = useState<string>("");
+  const [receipt,        setReceipt]        = useState<(TransactionReceipt & { fromSavings?: boolean; savingsDeducted?: number; newSavingsBalance?: number; newLoanBalance?: number }) | null>(null);
+  const [payFromSavings, setPayFromSavings] = useState(false);
+  const [isSubmitting,   setIsSubmitting]   = useState(false);
 
   const { data: members, isLoading: isLoadingMembers } = useListMembers(
     undefined,
     { query: { queryKey: getListMembersQueryKey() } }
   );
 
+  const invalidateAll = (mid: number) => {
+    queryClient.invalidateQueries({ queryKey: getGetActiveLoansQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListMembersQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetMemberQueryKey(mid) });
+    queryClient.invalidateQueries({ queryKey: getGetMemberLedgerQueryKey(mid) });
+  };
+
   const createTx = useCreateTransaction({
     mutation: {
       onSuccess: (data) => {
         toast.success("Transaction recorded successfully");
         setReceipt(data);
-        queryClient.invalidateQueries({ queryKey: getGetActiveLoansQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getListMembersQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getGetMemberQueryKey(data.memberId) });
-        queryClient.invalidateQueries({ queryKey: getGetMemberLedgerQueryKey(data.memberId) });
+        invalidateAll(data.memberId);
       },
       onError: (err: any) => {
         toast.error(err.error || "Failed to record transaction");
@@ -99,12 +107,44 @@ export function NewTransaction() {
     }
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!memberId || !amount || isNaN(Number(amount)) || Number(amount) <= 0) {
       toast.error("Please fill all required fields correctly");
       return;
     }
+
+    // ── Savings-offset loan repayment path ────────────────────────────────────
+    if (type === "LOAN_REPAYMENT" && payFromSavings) {
+      setIsSubmitting(true);
+      try {
+        const resp = await fetch(`${BASE}/api/transactions/repay-from-savings`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            memberId: parseInt(memberId, 10),
+            amount: Number(amount),
+            notes: notes || undefined,
+          }),
+          credentials: "include",
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          toast.error(data.error || "Failed to record transaction");
+          return;
+        }
+        toast.success("Loan repayment recorded — savings deducted");
+        setReceipt(data);
+        invalidateAll(data.memberId);
+      } catch {
+        toast.error("Network error. Please try again.");
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     createTx.mutate({
       data: {
         memberId: parseInt(memberId, 10),
@@ -166,7 +206,7 @@ export function NewTransaction() {
               <button
                 key={value}
                 type="button"
-                onClick={() => setType(value)}
+                onClick={() => { setType(value); setPayFromSavings(false); }}
                 className={`flex items-center gap-2.5 px-3.5 py-3 rounded-2xl border transition-all text-left ${
                   active
                     ? "border-[#B03060]/40 shadow-sm"
@@ -262,6 +302,49 @@ export function NewTransaction() {
               )}
             </div>
 
+            {/* ── Pay from Savings toggle (Loan Repayment only) ── */}
+            {type === "LOAN_REPAYMENT" && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setPayFromSavings(v => !v)}
+                  className={`w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl border transition-all ${
+                    payFromSavings
+                      ? "border-[#B03060]/30 bg-[#B03060]/6"
+                      : "border-gray-200 bg-gray-50/60 hover:border-gray-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 ${payFromSavings ? "bg-[#B03060]/15" : "bg-gray-100"}`}>
+                      <PiggyBank className={`h-3.5 w-3.5 ${payFromSavings ? "text-[#B03060]" : "text-gray-500"}`} />
+                    </div>
+                    <div className="text-left">
+                      <p className={`text-xs font-bold leading-tight ${payFromSavings ? "text-[#B03060]" : "text-[#0f2557]"}`}>Pay from Member Savings</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">Deduct repayment from savings balance</p>
+                    </div>
+                  </div>
+                  {/* Toggle pill */}
+                  <div className={`relative w-10 h-6 rounded-full transition-colors flex-shrink-0 ${payFromSavings ? "bg-[#B03060]" : "bg-gray-200"}`}>
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${payFromSavings ? "left-5" : "left-1"}`} />
+                  </div>
+                </button>
+
+                {/* Balance info strip when toggle is ON */}
+                {payFromSavings && selectedMember && (
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <div className="px-3 py-2.5 rounded-xl bg-emerald-50 border border-emerald-100">
+                      <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wide">Savings Balance</p>
+                      <p className="text-sm font-black text-emerald-700 mt-0.5">{formatCurrency(selectedMember.totalSavings ?? 0)}</p>
+                    </div>
+                    <div className="px-3 py-2.5 rounded-xl bg-orange-50 border border-orange-100">
+                      <p className="text-[10px] text-orange-600 font-bold uppercase tracking-wide">Loan Balance</p>
+                      <p className="text-sm font-black text-orange-700 mt-0.5">{formatCurrency(selectedMember.outstandingLoan ?? 0)}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* ── Notes ── */}
             <div>
               <FieldLabel>Notes <span className="normal-case font-normal text-gray-400">(optional)</span></FieldLabel>
@@ -280,15 +363,17 @@ export function NewTransaction() {
             {/* ── Submit ── */}
             <button
               type="submit"
-              disabled={createTx.isPending || !memberId || !amount || Number(amount) <= 0}
+              disabled={createTx.isPending || isSubmitting || !memberId || !amount || Number(amount) <= 0}
               className="w-full h-12 rounded-2xl text-white font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
             >
-              {createTx.isPending ? (
+              {(createTx.isPending || isSubmitting) ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                   Processing…
                 </span>
+              ) : payFromSavings && type === "LOAN_REPAYMENT" ? (
+                "Repay Loan from Savings"
               ) : (
                 "Record Transaction"
               )}
@@ -328,24 +413,55 @@ export function NewTransaction() {
                 ))}
               </div>
 
+              {/* "From savings" badge */}
+              {receipt.fromSavings && (
+                <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-[#B03060]/8 border border-[#B03060]/15">
+                  <PiggyBank className="h-3.5 w-3.5 text-[#B03060] flex-shrink-0" />
+                  <p className="text-xs text-[#B03060] font-semibold">Repaid from member savings</p>
+                </div>
+              )}
+
               {/* Amount highlight */}
-              <div className="mt-4 rounded-2xl px-4 py-4 flex justify-between items-center border"
+              <div className="rounded-2xl px-4 py-4 flex justify-between items-center border"
                 style={{
-                  background: receipt.direction === "credit" ? "linear-gradient(135deg,#f0fdf4,#dcfce7)" : "linear-gradient(135deg,#fff1f2,#ffe4e6)",
-                  borderColor: receipt.direction === "credit" ? "#bbf7d0" : "#fecdd3",
+                  background: "linear-gradient(135deg,#f0fdf4,#dcfce7)",
+                  borderColor: "#bbf7d0",
                 }}>
-                <span className="font-bold text-gray-700 text-sm">Amount</span>
-                <span className={`text-2xl font-black ${receipt.direction === "credit" ? "text-emerald-600" : "text-red-500"}`}>
-                  {receipt.direction === "credit" ? "+" : "-"}{formatCurrency(receipt.amount)}
+                <span className="font-bold text-gray-700 text-sm">Loan Repaid</span>
+                <span className="text-2xl font-black text-emerald-600">
+                  {formatCurrency(receipt.amount)}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center pt-4">
-                <span className="text-sm text-gray-400">Running Balance</span>
-                <span className={`font-black text-sm ${receipt.runningBalance >= 0 ? "text-[#0f2557]" : "text-red-500"}`}>
-                  {formatCurrency(receipt.runningBalance)}
-                </span>
-              </div>
+              {/* Savings deduction line when from savings */}
+              {receipt.fromSavings && (
+                <div className="mt-2 rounded-2xl px-4 py-3 flex justify-between items-center border border-red-100"
+                  style={{ background: "linear-gradient(135deg,#fff1f2,#ffe4e6)" }}>
+                  <span className="font-bold text-gray-700 text-sm">Savings Deducted</span>
+                  <span className="text-lg font-black text-red-500">−{formatCurrency(receipt.savingsDeducted ?? receipt.amount)}</span>
+                </div>
+              )}
+
+              {/* Updated balances when from savings */}
+              {receipt.fromSavings ? (
+                <div className="grid grid-cols-2 gap-2 pt-3">
+                  <div className="px-3 py-2.5 rounded-xl bg-emerald-50 border border-emerald-100">
+                    <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wide">New Savings</p>
+                    <p className="text-sm font-black text-emerald-700 mt-0.5">{formatCurrency(receipt.newSavingsBalance ?? 0)}</p>
+                  </div>
+                  <div className="px-3 py-2.5 rounded-xl bg-orange-50 border border-orange-100">
+                    <p className="text-[10px] text-orange-600 font-bold uppercase tracking-wide">Loan Left</p>
+                    <p className="text-sm font-black text-orange-700 mt-0.5">{formatCurrency(receipt.newLoanBalance ?? 0)}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center pt-4">
+                  <span className="text-sm text-gray-400">Running Balance</span>
+                  <span className={`font-black text-sm ${receipt.runningBalance >= 0 ? "text-[#0f2557]" : "text-red-500"}`}>
+                    {formatCurrency(receipt.runningBalance)}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 

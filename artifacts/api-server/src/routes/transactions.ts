@@ -157,6 +157,136 @@ router.post("/transactions", requireAdmin, async (req, res) => {
   }
 });
 
+// Admin-only: repay a loan using the member's savings balance (atomic double-entry)
+router.post("/transactions/repay-from-savings", requireAdmin, async (req, res) => {
+  try {
+    const { memberId, amount, notes } = req.body as {
+      memberId: number;
+      amount: number;
+      notes?: string;
+    };
+
+    if (!memberId || !amount || amount <= 0) {
+      res.status(400).json({ error: "memberId and a positive amount are required." });
+      return;
+    }
+
+    const [member] = await db
+      .select()
+      .from(membersTable)
+      .where(eq(membersTable.id, memberId));
+    if (!member) {
+      res.status(404).json({ error: "Member not found" });
+      return;
+    }
+
+    // Read all existing transactions once
+    const existingTxs = await db
+      .select()
+      .from(transactionsTable)
+      .where(eq(transactionsTable.memberId, memberId));
+
+    let savingsDeposits = 0;
+    let savingsWithdrawals = 0;
+    let loanDisbursements = 0;
+    let loanRepayments = 0;
+    for (const t of existingTxs) {
+      const amt = parseFloat(t.amount);
+      if (t.type === "SAVINGS_DEPOSIT") savingsDeposits += amt;
+      else if (t.type === "WITHDRAWAL") savingsWithdrawals += amt;
+      else if (t.type === "LOAN_DISBURSEMENT") loanDisbursements += amt;
+      else if (t.type === "LOAN_REPAYMENT") loanRepayments += amt;
+    }
+    const currentSavings = Math.max(0, savingsDeposits - savingsWithdrawals);
+    const outstandingLoan = Math.max(0, loanDisbursements - loanRepayments);
+
+    if (outstandingLoan === 0) {
+      res.status(400).json({ error: "This member has no outstanding loan balance." });
+      return;
+    }
+    if (amount > currentSavings) {
+      res.status(400).json({
+        error: "Incomplete transaction: Insufficient savings balance.",
+      });
+      return;
+    }
+    if (amount > outstandingLoan) {
+      res.status(400).json({
+        error: `Amount exceeds outstanding loan balance of ${outstandingLoan.toLocaleString()}.`,
+      });
+      return;
+    }
+
+    // Atomically insert both transactions
+    const repayRef = generateRef();
+    const withdrawRef = generateRef();
+    const noteText = notes ? `${notes} (deducted from savings)` : "Deducted from member savings";
+
+    const [repayTx] = await db
+      .insert(transactionsTable)
+      .values({
+        transactionRef: repayRef,
+        memberId,
+        type: "LOAN_REPAYMENT",
+        amount: String(amount),
+        notes: noteText,
+      })
+      .returning();
+
+    await db.insert(transactionsTable).values({
+      transactionRef: withdrawRef,
+      memberId,
+      type: "WITHDRAWAL",
+      amount: String(amount),
+      notes: noteText,
+    });
+
+    // Compute updated running balance
+    const allTxs = await db
+      .select()
+      .from(transactionsTable)
+      .where(eq(transactionsTable.memberId, memberId))
+      .orderBy(transactionsTable.createdAt);
+
+    let runningBalance = 0;
+    for (const t of allTxs) {
+      const amt = parseFloat(t.amount);
+      if (CREDIT_TYPES.includes(t.type as any)) runningBalance += amt;
+      else runningBalance -= amt;
+    }
+
+    // Notify member
+    notifyMemberTransaction({
+      memberId,
+      transactionRef: repayRef,
+      type: "LOAN_REPAYMENT",
+      amount,
+      runningBalance,
+      notes: noteText,
+    }).catch((err) => req.log.error({ err }, "notify error"));
+
+    res.status(201).json({
+      id: repayTx.id,
+      transactionRef: repayRef,
+      memberId,
+      memberName: member.name,
+      type: "LOAN_REPAYMENT",
+      direction: "credit",
+      amount,
+      notes: noteText,
+      runningBalance,
+      fromSavings: true,
+      savingsDeducted: amount,
+      newSavingsBalance: Math.max(0, currentSavings - amount),
+      newLoanBalance: Math.max(0, outstandingLoan - amount),
+      createdAt: repayTx.createdAt.toISOString(),
+    });
+  } catch (err) {
+    req.log.error({ err }, "repayFromSavings error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Public: view transaction receipt by ID
 router.get("/transactions/:transactionId", async (req, res) => {
   try {
