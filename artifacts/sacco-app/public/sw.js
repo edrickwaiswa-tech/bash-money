@@ -4,7 +4,7 @@
  * Bump CACHE_VERSION whenever you deploy a new build.
  */
 
-const CACHE_VERSION = "v5";
+const CACHE_VERSION = "v6";
 const CACHE_NAME = `bmmfs-${CACHE_VERSION}`;
 
 /** Assets pre-cached on SW install so the app shell loads instantly offline. */
