@@ -323,77 +323,74 @@ router.post("/auth/admin/upload/profile-picture-data", async (req, res): Promise
 });
 
 // ── POST /auth/forgot-pin/request-code ───────────────────────────────────────
-// Used by members who forget their PIN (SMS OTP flow)
+// Used by members who forget their PIN (email OTP flow via Brevo)
 router.post("/auth/forgot-pin/request-code", async (req, res): Promise<void> => {
-  const { phone } = req.body;
-  if (!phone) { res.status(400).json({ error: "Phone number is required" }); return; }
+  const { email } = req.body;
+  if (!email) { res.status(400).json({ error: "Email address is required" }); return; }
+
+  const id = (email as string).trim().toLowerCase();
 
   const [member] = await db
-    .select({ id: membersTable.id, phone: membersTable.phone })
+    .select({ id: membersTable.id, name: membersTable.name, email: membersTable.email })
     .from(membersTable)
-    .where(eq(membersTable.phone, phone as string));
+    .where(eq(membersTable.email, id));
 
   if (!member) {
-    res.status(404).json({ error: "No account found for this phone number" }); return;
+    res.status(404).json({ error: "No account found for this email address" }); return;
   }
 
   const DEV_CODE = "123456";
-  const twilioReady = !!(process.env.TWILIO_ACCOUNT_SID?.trim() && process.env.TWILIO_AUTH_TOKEN?.trim() && process.env.TWILIO_PHONE_NUMBER?.trim());
+  const smtpConfigured = !!(process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim());
   const expiresAt = Date.now() + 30 * 60 * 1000;
 
-  if (!twilioReady) {
-    // No credentials — use fixed test code and notify via browser alert
-    pendingOtps.set(phone as string, { code: DEV_CODE, expiresAt });
-    logger.warn({ phone }, "Twilio not configured — PIN reset using devFallback code 123456");
+  if (!smtpConfigured) {
+    pendingOtps.set(id, { code: DEV_CODE, expiresAt });
+    logger.warn({ email: id }, "SMTP not configured — PIN reset using devFallback code 123456");
     res.json({ success: true, devFallback: true, notificationCode: DEV_CODE, message: "Verification code ready" });
     return;
   }
 
-  // Credentials present — generate real code and send via Twilio
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  pendingOtps.set(phone as string, { code, expiresAt });
+  pendingOtps.set(id, { code, expiresAt });
 
-  const smsResult = await sendSms({
-    to: phone as string,
-    body: `BMMFS PIN Reset: Your verification code is ${code}. Valid for 30 minutes. Do not share this code.`,
-    code,
-  });
+  const { sendMemberPinResetEmail } = await import("../lib/mailer.js");
+  const mailResult = await sendMemberPinResetEmail({ toEmail: id, memberName: member.name, code })
+    .catch((err) => { logger.error({ err }, "sendMemberPinResetEmail threw"); return { sent: false }; });
 
-  logger.info({ phone, delivered: smsResult.delivered }, "PIN reset code dispatched");
-
-  if (!smsResult.delivered && smsResult.devFallback) {
-    // Twilio call failed — switch stored code to DEV_CODE so user can still proceed
-    pendingOtps.set(phone as string, { code: DEV_CODE, expiresAt });
-    logger.warn({ phone }, "Twilio delivery failed — switching stored code to devFallback 123456");
+  if (!mailResult.sent) {
+    pendingOtps.set(id, { code: DEV_CODE, expiresAt });
+    logger.warn({ email: id }, "Brevo delivery failed — switching stored code to devFallback 123456");
     res.json({ success: true, devFallback: true, notificationCode: DEV_CODE, message: "Verification code ready" });
     return;
   }
 
-  res.json({ success: true, message: "Verification code sent to your phone" });
+  logger.info({ email: id }, "Member PIN reset code sent via Brevo");
+  res.json({ success: true, message: "Verification code sent to your email" });
 });
 
 // ── POST /auth/forgot-pin/verify-code ────────────────────────────────────────
 // Verifies the OTP, issues a short-lived member reset token
 router.post("/auth/forgot-pin/verify-code", async (req, res): Promise<void> => {
-  const { phone, code } = req.body;
-  if (!phone || !code) { res.status(400).json({ error: "Phone and code are required" }); return; }
+  const { email, code } = req.body;
+  if (!email || !code) { res.status(400).json({ error: "Email and code are required" }); return; }
 
-  const stored = pendingOtps.get(phone as string);
+  const id = (email as string).trim().toLowerCase();
+
+  const stored = pendingOtps.get(id);
   if (!stored) { res.status(400).json({ error: "No pending code. Please request again." }); return; }
   if (Date.now() > stored.expiresAt) {
-    pendingOtps.delete(phone as string);
+    pendingOtps.delete(id);
     res.status(400).json({ error: "Code has expired. Please request a new one." }); return;
   }
   if (stored.code !== (code as string)) {
     res.status(400).json({ error: "Incorrect code. Please try again." }); return;
   }
-  pendingOtps.delete(phone as string);
+  pendingOtps.delete(id);
 
-  // ✅ FIXED: look up the MEMBER (not admin) who owns this phone number
   const [member] = await db
     .select({ id: membersTable.id })
     .from(membersTable)
-    .where(eq(membersTable.phone, phone as string));
+    .where(eq(membersTable.email, id));
 
   if (!member) { res.status(404).json({ error: "Member account not found" }); return; }
 

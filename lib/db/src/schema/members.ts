@@ -7,6 +7,7 @@ export const membersTable = pgTable("members", {
   accountNumber: text("account_number").notNull().unique(),
   name: text("name").notNull(),
   phone: text("phone").notNull(),
+  email: text("email"),
   idNumber: text("id_number").notNull().unique(),
   joinDate: text("join_date").notNull(),
   profilePictureUrl: text("profile_picture_url"),

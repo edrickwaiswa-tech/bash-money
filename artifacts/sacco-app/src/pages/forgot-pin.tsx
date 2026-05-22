@@ -5,16 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PinInput } from "@/components/pin-input";
 import { BmmLogo } from "@/components/bmm-logo";
-import { ArrowLeft, Phone, KeyRound, CheckCircle, AlertCircle, Info } from "lucide-react";
+import { ArrowLeft, Mail, KeyRound, CheckCircle, AlertCircle, Info } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-type Step = "phone" | "code" | "new-pin" | "success";
+type Step = "email" | "code" | "new-pin" | "success";
 
 export function ForgotPin() {
   const [, navigate] = useLocation();
-  const [step, setStep] = useState<Step>("phone");
-  const [phone, setPhone] = useState("");
+  const [step, setStep] = useState<Step>("email");
+  const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [resetToken, setResetToken] = useState("");
   const [newPin, setNewPin] = useState("");
@@ -42,7 +42,7 @@ export function ForgotPin() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ email }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Failed to send code"); return; }
@@ -65,7 +65,7 @@ export function ForgotPin() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ phone, code: codeToCheck }),
+        body: JSON.stringify({ email, code: codeToCheck }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Verification failed"); setCode(""); return; }
@@ -114,27 +114,27 @@ export function ForgotPin() {
       <div className="flex-1 px-4 -mt-8 flex flex-col max-w-sm mx-auto w-full">
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
 
-          {/* ── Step 1: Phone ── */}
-          {step === "phone" && (
+          {/* ── Step 1: Email ── */}
+          {step === "email" && (
             <>
               <div className="px-6 pt-7 pb-5 text-center border-b border-gray-50">
                 <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-[#B03060]/8 mb-3">
-                  <Phone className="w-5 h-5 text-[#B03060]" />
+                  <Mail className="w-5 h-5 text-[#B03060]" />
                 </div>
                 <p className="font-bold text-[#1A1A1A] text-base">Forgot PIN</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Enter your registered phone number to receive a verification code.
+                  Enter your registered email to receive a secure reset code.
                 </p>
               </div>
               <div className="px-6 py-6">
                 <form onSubmit={handleRequestCode} className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Phone Number</label>
+                    <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Email Address</label>
                     <Input
-                      type="tel"
-                      placeholder="+256 700 000000"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
                       disabled={isLoading}
                       autoFocus
@@ -153,7 +153,7 @@ export function ForgotPin() {
                     type="submit"
                     className="w-full h-11 rounded-xl text-white font-semibold"
                     style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
-                    disabled={isLoading || !phone}
+                    disabled={isLoading || !email}
                   >
                     {isLoading ? "Checking..." : "Send verification code"}
                   </Button>
@@ -173,7 +173,7 @@ export function ForgotPin() {
             <>
               <div className="px-6 pt-7 pb-5 text-center border-b border-gray-50 relative">
                 <button
-                  onClick={() => { setStep("phone"); setCode(""); setError(""); }}
+                  onClick={() => { setStep("email"); setCode(""); setError(""); }}
                   className="absolute left-4 top-5 text-muted-foreground hover:text-[#B03060] transition-colors"
                 >
                   <ArrowLeft className="w-5 h-5" />
@@ -183,13 +183,13 @@ export function ForgotPin() {
                 </div>
                 <p className="font-bold text-[#1A1A1A] text-base">Enter verification code</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  A 6-digit code was sent to <span className="font-semibold text-[#B03060]">{phone}</span>
+                  A 6-digit code was sent to <span className="font-semibold text-[#B03060]">{email}</span>
                 </p>
               </div>
               <div className="px-6 py-6 space-y-4">
                 <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 text-blue-800 rounded-2xl px-3 py-3 text-sm">
                   <Info className="w-4 h-4 mt-0.5 shrink-0" />
-                  <p className="text-xs leading-relaxed">A 6-digit code has been sent to your phone via SMS. Enter it below to continue.</p>
+                  <p className="text-xs leading-relaxed">A 6-digit code has been sent to your email address. Enter it below to continue.</p>
                 </div>
 
                 <PinInput
@@ -221,14 +221,14 @@ export function ForgotPin() {
                   <button
                     type="button"
                     className="text-muted-foreground hover:text-[#1A1A1A] transition-colors font-medium"
-                    onClick={() => { setStep("phone"); setCode(""); setError(""); }}
+                    onClick={() => { setStep("email"); setCode(""); setError(""); }}
                   >
-                    ← Change number
+                    ← Change email
                   </button>
                   <button
                     type="button"
                     className="text-[#B03060] hover:underline font-semibold"
-                    onClick={() => { setStep("phone"); setCode(""); setError(""); }}
+                    onClick={() => { setStep("email"); setCode(""); setError(""); }}
                   >
                     Resend code
                   </button>
