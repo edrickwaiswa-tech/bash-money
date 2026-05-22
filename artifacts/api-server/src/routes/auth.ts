@@ -8,6 +8,7 @@ import {
 } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { sendLoginApprovalEmail } from "../lib/mailer";
+import { sendSms } from "../lib/sms";
 
 const router: IRouter = Router();
 
@@ -340,11 +341,18 @@ router.post("/auth/forgot-pin/request-code", async (req, res): Promise<void> => 
   const expiresAt = Date.now() + 10 * 60 * 1000;
   pendingOtps.set(phone as string, { code, expiresAt });
 
-  logger.info({ phone, code }, "🔐 [SIMULATED SMS] PIN Reset Code");
-  console.log(`\n${"━".repeat(44)}`);
-  console.log(`  📱 BMMFS — PIN Reset  |  To: ${phone}`);
-  console.log(`  Code: ${code}  (expires in 10 min)`);
-  console.log(`${"━".repeat(44)}\n`);
+  const smsResult = await sendSms({
+    to: phone as string,
+    body: `BMMFS PIN Reset: Your verification code is ${code}. Expires in 10 minutes. Do not share this code.`,
+    code,
+  });
+
+  logger.info({ phone, delivered: smsResult.delivered }, "PIN reset code dispatched");
+
+  if (!smsResult.delivered && smsResult.devFallback) {
+    res.json({ success: true, devFallback: true, notificationCode: smsResult.notificationCode, message: "Verification code ready" });
+    return;
+  }
 
   res.json({ success: true, message: "Verification code sent to your phone" });
 });
@@ -439,8 +447,20 @@ router.post("/auth/member/request-otp", async (req, res): Promise<void> => {
   if (!member) { res.status(404).json({ error: "No account found for this phone number" }); return; }
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   memberOtps.set(phone as string, { code, expiresAt: Date.now() + 10 * 60 * 1000, memberId: member.id });
-  logger.info({ phone, code }, "📱 [SIMULATED SMS] Member Login Code");
-  console.log(`\n${"━".repeat(44)}\n  📱 BMMFS Member Login  |  To: ${phone}\n  Code: ${code}\n${"━".repeat(44)}\n`);
+
+  const smsResult = await sendSms({
+    to: phone as string,
+    body: `BMMFS Member Login: Your verification code is ${code}. Expires in 10 minutes. Do not share this code.`,
+    code,
+  });
+
+  logger.info({ phone, delivered: smsResult.delivered }, "Member login OTP dispatched");
+
+  if (!smsResult.delivered && smsResult.devFallback) {
+    res.json({ success: true, devFallback: true, notificationCode: smsResult.notificationCode });
+    return;
+  }
+
   res.json({ success: true });
 });
 
@@ -621,10 +641,17 @@ router.post("/auth/admin/forgot-password", async (req, res): Promise<void> => {
   adminResetOtps.set(id, { code, expiresAt: Date.now() + 10 * 60 * 1000, adminId: admin.id });
 
   const { sendPasswordResetEmail } = await import("../lib/mailer.js");
-  sendPasswordResetEmail({ toEmail: id, adminName: admin.fullName ?? id, code })
-    .catch((err) => logger.error({ err }, "sendPasswordResetEmail failed"));
+  const mailResult = await sendPasswordResetEmail({ toEmail: id, adminName: admin.fullName ?? id, code })
+    .catch((err) => { logger.error({ err }, "sendPasswordResetEmail threw"); return { sent: false }; });
 
-  logger.info({ adminId: admin.id, email: id }, "Admin password reset code generated");
+  if (!mailResult.sent) {
+    adminResetOtps.delete(id);
+    logger.warn({ adminId: admin.id, email: id }, "Password reset blocked — SMTP not configured");
+    res.status(503).json({ error: "Email delivery is not configured on this server. Please contact the system administrator to set up SMTP, then try again." });
+    return;
+  }
+
+  logger.info({ adminId: admin.id, email: id }, "Admin password reset code sent via email");
   res.json({ success: true, message: "If that email is registered, a reset code has been sent." });
 });
 

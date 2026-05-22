@@ -19,6 +19,18 @@ export function MemberLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const fireNotification = async (code: string) => {
+    const title = "BMMFS — Login Code";
+    const body  = `Your BMMFS verification code is: ${code}`;
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "granted") {
+      new Notification(title, { body, icon: `${BASE}/logo.png` });
+    } else if (Notification.permission !== "denied") {
+      const perm = await Notification.requestPermission();
+      if (perm === "granted") new Notification(title, { body, icon: `${BASE}/logo.png` });
+    }
+  };
+
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone.trim()) return;
@@ -33,8 +45,13 @@ export function MemberLogin() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Failed to send code"); return; }
+      if (data.devFallback && data.notificationCode) {
+        await fireNotification(data.notificationCode as string);
+        toast.success("Check your notification — code delivered");
+      } else {
+        toast.success("Verification code sent via SMS");
+      }
       setStep("otp");
-      toast.success("Verification code sent");
     } catch {
       setError("Network error. Please try again.");
     } finally {

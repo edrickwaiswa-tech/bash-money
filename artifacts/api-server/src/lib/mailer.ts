@@ -75,7 +75,7 @@ export async function sendPasswordResetEmail(params: {
   toEmail: string;
   adminName: string;
   code: string;
-}): Promise<void> {
+}): Promise<{ sent: boolean }> {
   const { toEmail, adminName, code } = params;
   const html = `<!DOCTYPE html>
 <html>
@@ -109,36 +109,29 @@ export async function sendPasswordResetEmail(params: {
 
   const smtpUser = process.env.SMTP_USER;
   const smtpPass = process.env.SMTP_PASS;
-  if (smtpUser && smtpPass) {
-    try {
-      const nodemailer = await import("nodemailer");
-      const transporter = nodemailer.default.createTransport({
-        service: "gmail",
-        auth: { user: smtpUser, pass: smtpPass },
-      });
-      await transporter.sendMail({
-        from: `"BMMFS Security" <${smtpUser}>`,
-        to: toEmail,
-        subject: "🔑 Your BMMFS Admin Password Reset Code",
-        html,
-        text: `BMMFS Password Reset\n\nHello ${adminName},\n\nYour reset code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, contact your administrator immediately.`,
-      });
-      logger.info({ to: toEmail }, "Password reset email sent");
-      return;
-    } catch (err) {
-      logger.error({ err }, "SMTP send failed for password reset email");
-    }
+  if (!smtpUser || !smtpPass) {
+    logger.warn({ to: toEmail }, "SMTP not configured — password reset email could not be sent. Set SMTP_USER and SMTP_PASS secrets.");
+    return { sent: false };
   }
-
-  // Fallback: print to server console so operators can read it
-  const line = "═".repeat(56);
-  console.log(`\n${line}`);
-  console.log(`  🔑  BMMFS — Admin Password Reset Code`);
-  console.log(`  📧  To: ${toEmail}`);
-  console.log(`  👤  Admin: ${adminName}`);
-  console.log(line);
-  console.log(`  Code: ${code}  (expires in 10 min)`);
-  console.log(`${line}\n`);
+  try {
+    const nodemailer = await import("nodemailer");
+    const transporter = nodemailer.default.createTransport({
+      service: "gmail",
+      auth: { user: smtpUser, pass: smtpPass },
+    });
+    await transporter.sendMail({
+      from: `"BMMFS Security" <${smtpUser}>`,
+      to: toEmail,
+      subject: "🔑 Your BMMFS Admin Password Reset Code",
+      html,
+      text: `BMMFS Password Reset\n\nHello ${adminName},\n\nYour reset code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, contact your administrator immediately.`,
+    });
+    logger.info({ to: toEmail }, "Password reset email sent");
+    return { sent: true };
+  } catch (err) {
+    logger.error({ err, to: toEmail }, "SMTP send failed for password reset email");
+    return { sent: false };
+  }
 }
 
 export async function sendLoginApprovalEmail(params: {
