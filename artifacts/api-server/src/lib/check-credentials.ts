@@ -1,41 +1,23 @@
 import { logger } from "./logger";
 
 export interface CredentialStatus {
-  twilioReady: boolean;
+  brevoSmsReady: boolean;
   smtpReady: boolean;
   allReady: boolean;
 }
 
 const REQUIRED = [
   {
-    key: "TWILIO_ACCOUNT_SID",
-    label: "Twilio Account SID",
-    group: "twilio",
-    hint: "From https://console.twilio.com — Account Info panel",
-  },
-  {
-    key: "TWILIO_AUTH_TOKEN",
-    label: "Twilio Auth Token",
-    group: "twilio",
-    hint: "From https://console.twilio.com — Account Info panel",
-  },
-  {
-    key: "TWILIO_PHONE_NUMBER",
-    label: "Twilio Phone Number",
-    group: "twilio",
-    hint: "Your Twilio sender number, e.g. +15005550006",
-  },
-  {
     key: "SMTP_USER",
-    label: "Brevo SMTP Login (SMTP_USER)",
+    label: "Brevo Login (SMTP_USER)",
     group: "smtp",
     hint: "From Brevo → SMTP & API → SMTP tab — 'Login' field",
   },
   {
     key: "SMTP_PASS",
-    label: "Brevo SMTP Key (SMTP_PASS)",
+    label: "Brevo API Key (SMTP_PASS) — used for both SMS and SMTP",
     group: "smtp",
-    hint: "From Brevo → SMTP & API → SMTP tab — 'Master password' or generated key",
+    hint: "From Brevo → SMTP & API → API Keys tab",
   },
 ] as const;
 
@@ -52,10 +34,7 @@ export function checkCredentials(): CredentialStatus {
     }
   }
 
-  const twilioReady =
-    !!process.env.TWILIO_ACCOUNT_SID?.trim() &&
-    !!process.env.TWILIO_AUTH_TOKEN?.trim() &&
-    !!process.env.TWILIO_PHONE_NUMBER?.trim();
+  const brevoSmsReady = !!process.env.SMTP_PASS?.trim();
 
   const smtpReady =
     !!process.env.SMTP_USER?.trim() &&
@@ -64,8 +43,8 @@ export function checkCredentials(): CredentialStatus {
   const line = "═".repeat(68);
 
   if (missing.length === 0) {
-    logger.info("All notification credentials verified — Twilio SMS and Brevo SMTP active");
-    return { twilioReady, smtpReady, allReady: true };
+    logger.info("All notification credentials verified — Brevo SMS and SMTP active");
+    return { brevoSmsReady, smtpReady, allReady: true };
   }
 
   // Print a highly visible block to the server console
@@ -91,12 +70,12 @@ export function checkCredentials(): CredentialStatus {
   console.error(`  Code 123456 is shown via browser alert — real SMS/email is skipped.`);
   console.error(`${line}\n`);
 
-  if (!twilioReady) {
-    logger.warn("Twilio SMS NOT ready — PIN reset and member OTP will use devFallback (code 123456)");
+  if (!brevoSmsReady) {
+    logger.warn("Brevo SMS NOT ready — PIN reset and member OTP will use devFallback (code 123456)");
   }
   if (!smtpReady) {
     logger.warn("Brevo SMTP NOT ready — admin password reset will use devFallback (code 123456)");
   }
 
-  return { twilioReady, smtpReady, allReady: false };
+  return { brevoSmsReady, smtpReady, allReady: false };
 }

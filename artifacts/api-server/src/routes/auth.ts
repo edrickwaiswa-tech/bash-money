@@ -369,16 +369,15 @@ router.post("/auth/forgot-pin/request-code", async (req, res): Promise<void> => 
     res.status(404).json({ error: "No account found for this phone number" }); return;
   }
 
-  // Use the phone value from the DB as the Twilio destination — it is already
-  // in the canonical format stored at registration time.
-  const twilioTo = normalisePhone(member.phone);
+  // Use the stored DB phone as the Brevo destination — normalised to E.164.
+  const smsTo = normalisePhone(member.phone);
   const DEV_CODE = "123456";
-  const twilioReady = !!(process.env.TWILIO_ACCOUNT_SID?.trim() && process.env.TWILIO_AUTH_TOKEN?.trim() && process.env.TWILIO_PHONE_NUMBER?.trim());
-  const expiresAt = Date.now() + 30 * 60 * 1000;
+  const brevoSmsReady = !!process.env.SMTP_PASS?.trim();
+  const expiresAt = Date.now() + 10 * 60 * 1000;
 
-  if (!twilioReady) {
+  if (!brevoSmsReady) {
     pendingOtps.set(normalised, { code: DEV_CODE, expiresAt });
-    logger.warn({ phone: twilioTo }, "Twilio not configured — PIN reset using devFallback code 123456");
+    logger.warn({ phone: smsTo }, "Brevo API key not configured — PIN reset using devFallback code 123456");
     res.json({ success: true, devFallback: true, notificationCode: DEV_CODE, message: "Verification code ready" });
     return;
   }
@@ -387,16 +386,16 @@ router.post("/auth/forgot-pin/request-code", async (req, res): Promise<void> => 
   pendingOtps.set(normalised, { code, expiresAt });
 
   const smsResult = await sendSms({
-    to:   twilioTo,
-    body: `BMMFS PIN Reset: Your verification code is ${code}. Valid for 30 minutes. Do not share this code.`,
+    to:   smsTo,
+    body: `Your BMMFS verification code is: ${code}. Expires in 10 minutes.`,
     code,
   });
 
-  logger.info({ phone: twilioTo, delivered: smsResult.delivered }, "PIN reset code dispatched");
+  logger.info({ phone: smsTo, delivered: smsResult.delivered }, "PIN reset code dispatched via Brevo SMS");
 
   if (!smsResult.delivered && smsResult.devFallback) {
     pendingOtps.set(normalised, { code: DEV_CODE, expiresAt });
-    logger.warn({ phone: twilioTo }, "Twilio delivery failed — switching stored code to devFallback 123456");
+    logger.warn({ phone: smsTo }, "Brevo SMS delivery failed — switching stored code to devFallback 123456");
     res.json({ success: true, devFallback: true, notificationCode: DEV_CODE, message: "Verification code ready" });
     return;
   }
@@ -496,12 +495,12 @@ router.post("/auth/member/request-otp", async (req, res): Promise<void> => {
     .from(membersTable).where(eq(membersTable.phone, phone as string));
   if (!member) { res.status(404).json({ error: "No account found for this phone number" }); return; }
   const DEV_CODE = "123456";
-  const twilioReady = !!(process.env.TWILIO_ACCOUNT_SID?.trim() && process.env.TWILIO_AUTH_TOKEN?.trim() && process.env.TWILIO_PHONE_NUMBER?.trim());
-  const expiresAt = Date.now() + 30 * 60 * 1000;
+  const brevoSmsReady = !!process.env.SMTP_PASS?.trim();
+  const expiresAt = Date.now() + 10 * 60 * 1000;
 
-  if (!twilioReady) {
+  if (!brevoSmsReady) {
     memberOtps.set(phone as string, { code: DEV_CODE, expiresAt, memberId: member.id });
-    logger.warn({ phone }, "Twilio not configured — member OTP using devFallback code 123456");
+    logger.warn({ phone }, "Brevo API key not configured — member OTP using devFallback code 123456");
     res.json({ success: true, devFallback: true, notificationCode: DEV_CODE });
     return;
   }
@@ -511,15 +510,15 @@ router.post("/auth/member/request-otp", async (req, res): Promise<void> => {
 
   const smsResult = await sendSms({
     to: phone as string,
-    body: `BMMFS Member Login: Your verification code is ${code}. Valid for 30 minutes. Do not share this code.`,
+    body: `Your BMMFS verification code is: ${code}. Expires in 10 minutes.`,
     code,
   });
 
-  logger.info({ phone, delivered: smsResult.delivered }, "Member OTP dispatched");
+  logger.info({ phone, delivered: smsResult.delivered }, "Member OTP dispatched via Brevo SMS");
 
   if (!smsResult.delivered && smsResult.devFallback) {
     memberOtps.set(phone as string, { code: DEV_CODE, expiresAt, memberId: member.id });
-    logger.warn({ phone }, "Twilio delivery failed — switching stored code to devFallback 123456");
+    logger.warn({ phone }, "Brevo SMS delivery failed — switching stored code to devFallback 123456");
     res.json({ success: true, devFallback: true, notificationCode: DEV_CODE });
     return;
   }

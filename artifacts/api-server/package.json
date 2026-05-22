@@ -23,8 +23,7 @@
     "nanoid": "^5.1.11",
     "nodemailer": "^8.0.7",
     "pino": "^9",
-    "pino-http": "^10",
-    "twilio": "^6.0.2"
+    "pino-http": "^10"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
