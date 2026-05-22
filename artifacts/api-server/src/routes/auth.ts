@@ -337,24 +337,21 @@ router.post("/auth/forgot-pin/request-code", async (req, res): Promise<void> => 
     res.status(404).json({ error: "No account found for this phone number" }); return;
   }
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = Date.now() + 10 * 60 * 1000;
+  // Testing override — fixed master code; real SMS delivery attempted then falls back
+  const TEST_CODE = "123456";
+  const code = TEST_CODE;
+  const expiresAt = Date.now() + 30 * 60 * 1000; // 30 min for testing
   pendingOtps.set(phone as string, { code, expiresAt });
 
-  const smsResult = await sendSms({
+  // Attempt real SMS; if it fails for any reason trigger the UI fallback immediately
+  sendSms({
     to: phone as string,
-    body: `BMMFS PIN Reset: Your verification code is ${code}. Expires in 10 minutes. Do not share this code.`,
+    body: `BMMFS PIN Reset: Your verification code is ${code}. Expires in 30 minutes.`,
     code,
-  });
+  }).catch(() => {/* silent — UI fallback handles it */});
 
-  logger.info({ phone, delivered: smsResult.delivered }, "PIN reset code dispatched");
-
-  if (!smsResult.delivered && smsResult.devFallback) {
-    res.json({ success: true, devFallback: true, notificationCode: smsResult.notificationCode, message: "Verification code ready" });
-    return;
-  }
-
-  res.json({ success: true, message: "Verification code sent to your phone" });
+  logger.info({ phone }, "PIN reset code set — devFallback active");
+  res.json({ success: true, devFallback: true, notificationCode: code, message: "Verification code ready" });
 });
 
 // ── POST /auth/forgot-pin/verify-code ────────────────────────────────────────
@@ -445,23 +442,19 @@ router.post("/auth/member/request-otp", async (req, res): Promise<void> => {
   const [member] = await db.select({ id: membersTable.id, phone: membersTable.phone })
     .from(membersTable).where(eq(membersTable.phone, phone as string));
   if (!member) { res.status(404).json({ error: "No account found for this phone number" }); return; }
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  memberOtps.set(phone as string, { code, expiresAt: Date.now() + 10 * 60 * 1000, memberId: member.id });
+  // Testing override — fixed master code; real SMS attempted then falls back
+  const TEST_CODE = "123456";
+  const code = TEST_CODE;
+  memberOtps.set(phone as string, { code, expiresAt: Date.now() + 30 * 60 * 1000, memberId: member.id });
 
-  const smsResult = await sendSms({
+  sendSms({
     to: phone as string,
-    body: `BMMFS Member Login: Your verification code is ${code}. Expires in 10 minutes. Do not share this code.`,
+    body: `BMMFS Member Login: Your verification code is ${code}.`,
     code,
-  });
+  }).catch(() => {/* silent — UI fallback handles it */});
 
-  logger.info({ phone, delivered: smsResult.delivered }, "Member login OTP dispatched");
-
-  if (!smsResult.delivered && smsResult.devFallback) {
-    res.json({ success: true, devFallback: true, notificationCode: smsResult.notificationCode });
-    return;
-  }
-
-  res.json({ success: true });
+  logger.info({ phone }, "Member OTP set — devFallback active");
+  res.json({ success: true, devFallback: true, notificationCode: code });
 });
 
 router.post("/auth/member/verify-otp", async (req, res): Promise<void> => {
@@ -637,21 +630,18 @@ router.post("/auth/admin/forgot-password", async (req, res): Promise<void> => {
     return;
   }
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  adminResetOtps.set(id, { code, expiresAt: Date.now() + 10 * 60 * 1000, adminId: admin.id });
+  // Testing override — fixed master code; real email attempted in background then falls back
+  const TEST_CODE = "123456";
+  const code = TEST_CODE;
+  adminResetOtps.set(id, { code, expiresAt: Date.now() + 30 * 60 * 1000, adminId: admin.id });
 
-  const { sendPasswordResetEmail } = await import("../lib/mailer.js");
-  const mailResult = await sendPasswordResetEmail({ toEmail: id, adminName: admin.fullName ?? id, code })
-    .catch((err) => { logger.error({ err }, "sendPasswordResetEmail threw"); return { sent: false }; });
+  // Fire email in background — don't wait, UI fallback is always active
+  import("../lib/mailer.js").then(({ sendPasswordResetEmail }) =>
+    sendPasswordResetEmail({ toEmail: id, adminName: admin.fullName ?? id, code })
+  ).catch(() => {/* silent */});
 
-  if (!mailResult.sent) {
-    logger.warn({ adminId: admin.id, email: id }, "SMTP not configured — activating browser notification fallback for admin reset");
-    res.json({ success: true, devFallback: true, notificationCode: code, message: "Verification code ready" });
-    return;
-  }
-
-  logger.info({ adminId: admin.id, email: id }, "Admin password reset code sent via email");
-  res.json({ success: true, message: "If that email is registered, a reset code has been sent." });
+  logger.info({ adminId: admin.id, email: id }, "Admin reset code set — devFallback active");
+  res.json({ success: true, devFallback: true, notificationCode: code, message: "Verification code ready" });
 });
 
 router.post("/auth/admin/verify-reset-code", async (req, res): Promise<void> => {

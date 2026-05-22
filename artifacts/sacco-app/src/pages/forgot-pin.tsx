@@ -23,14 +23,13 @@ export function ForgotPin() {
   const [isLoading, setIsLoading] = useState(false);
 
   const fireNotification = async (code: string) => {
-    const title = "BMMFS — Verification Code";
-    const body  = `Your BMMFS PIN reset code is: ${code}`;
+    window.alert(`BMMFS Security\n\nDevelopment Fallback: Your recovery code is ${code}\n\nEnter this code on the next screen.`);
     if (!("Notification" in window)) return;
     if (Notification.permission === "granted") {
-      new Notification(title, { body, icon: `${BASE}/logo.png` });
+      new Notification("BMMFS — Verification Code", { body: `Development Fallback: Your recovery code is ${code}` });
     } else if (Notification.permission !== "denied") {
       const perm = await Notification.requestPermission();
-      if (perm === "granted") new Notification(title, { body, icon: `${BASE}/logo.png` });
+      if (perm === "granted") new Notification("BMMFS — Verification Code", { body: `Development Fallback: Your recovery code is ${code}` });
     }
   };
 

@@ -20,14 +20,13 @@ export function MemberLogin() {
   const [error, setError] = useState("");
 
   const fireNotification = async (code: string) => {
-    const title = "BMMFS — Login Code";
-    const body  = `Your BMMFS verification code is: ${code}`;
+    window.alert(`BMMFS Security\n\nDevelopment Fallback: Your login code is ${code}\n\nEnter this code on the next screen.`);
     if (!("Notification" in window)) return;
     if (Notification.permission === "granted") {
-      new Notification(title, { body, icon: `${BASE}/logo.png` });
+      new Notification("BMMFS — Login Code", { body: `Development Fallback: Your login code is ${code}` });
     } else if (Notification.permission !== "denied") {
       const perm = await Notification.requestPermission();
-      if (perm === "granted") new Notification(title, { body, icon: `${BASE}/logo.png` });
+      if (perm === "granted") new Notification("BMMFS — Login Code", { body: `Development Fallback: Your login code is ${code}` });
     }
   };
 
