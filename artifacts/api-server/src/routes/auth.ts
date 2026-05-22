@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
-import { eq, or, desc } from "drizzle-orm";
+import { eq, or, desc, like } from "drizzle-orm";
 import {
   db, adminUsersTable, membersTable,
   adminLoginRequestsTable, adminSecurityLogsTable,
@@ -30,6 +30,18 @@ function normalisePhone(raw: string): string {
   if (/^256\d{9}$/.test(s)) return "+" + s;              // 256xxxxxxxx
   if (s.startsWith("+")) return s;
   return "+" + s;
+}
+
+// Extracts the bare 9-digit subscriber number from any Ugandan phone string.
+// Used for a LIKE suffix search so stored formats like +256..., 0..., 256...
+// all match the same underlying number.
+function coreDigits(raw: string): string {
+  const digits = raw.replace(/\D/g, ""); // keep digits only
+  // Strip leading country code 256
+  if (digits.startsWith("256") && digits.length >= 12) return digits.slice(3);
+  // Strip leading 0
+  if (digits.startsWith("0") && digits.length >= 10) return digits.slice(1);
+  return digits;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -343,25 +355,30 @@ router.post("/auth/forgot-pin/request-code", async (req, res): Promise<void> => 
   const { phone } = req.body;
   if (!phone) { res.status(400).json({ error: "Phone number is required" }); return; }
 
-  // Normalise to E.164 — handles Uganda local format: 07xxxxxxxx → +2567xxxxxxxx
+  // Normalise input for OTP map key; extract core digits for flexible DB lookup
   const normalised = normalisePhone(phone as string);
+  const core = coreDigits(phone as string);
 
+  // Suffix LIKE search — matches +256746724455, 0746724455, 256746724455, etc.
   const [member] = await db
     .select({ id: membersTable.id, phone: membersTable.phone })
     .from(membersTable)
-    .where(eq(membersTable.phone, normalised));
+    .where(like(membersTable.phone, `%${core}`));
 
   if (!member) {
     res.status(404).json({ error: "No account found for this phone number" }); return;
   }
 
+  // Use the phone value from the DB as the Twilio destination — it is already
+  // in the canonical format stored at registration time.
+  const twilioTo = normalisePhone(member.phone);
   const DEV_CODE = "123456";
   const twilioReady = !!(process.env.TWILIO_ACCOUNT_SID?.trim() && process.env.TWILIO_AUTH_TOKEN?.trim() && process.env.TWILIO_PHONE_NUMBER?.trim());
   const expiresAt = Date.now() + 30 * 60 * 1000;
 
   if (!twilioReady) {
     pendingOtps.set(normalised, { code: DEV_CODE, expiresAt });
-    logger.warn({ phone: normalised }, "Twilio not configured — PIN reset using devFallback code 123456");
+    logger.warn({ phone: twilioTo }, "Twilio not configured — PIN reset using devFallback code 123456");
     res.json({ success: true, devFallback: true, notificationCode: DEV_CODE, message: "Verification code ready" });
     return;
   }
@@ -370,16 +387,16 @@ router.post("/auth/forgot-pin/request-code", async (req, res): Promise<void> => 
   pendingOtps.set(normalised, { code, expiresAt });
 
   const smsResult = await sendSms({
-    to: normalised,
+    to:   twilioTo,
     body: `BMMFS PIN Reset: Your verification code is ${code}. Valid for 30 minutes. Do not share this code.`,
     code,
   });
 
-  logger.info({ phone: normalised, delivered: smsResult.delivered }, "PIN reset code dispatched");
+  logger.info({ phone: twilioTo, delivered: smsResult.delivered }, "PIN reset code dispatched");
 
   if (!smsResult.delivered && smsResult.devFallback) {
     pendingOtps.set(normalised, { code: DEV_CODE, expiresAt });
-    logger.warn({ phone: normalised }, "Twilio delivery failed — switching stored code to devFallback 123456");
+    logger.warn({ phone: twilioTo }, "Twilio delivery failed — switching stored code to devFallback 123456");
     res.json({ success: true, devFallback: true, notificationCode: DEV_CODE, message: "Verification code ready" });
     return;
   }
@@ -394,6 +411,7 @@ router.post("/auth/forgot-pin/verify-code", async (req, res): Promise<void> => {
   if (!phone || !code) { res.status(400).json({ error: "Phone and code are required" }); return; }
 
   const normalised = normalisePhone(phone as string);
+  const core = coreDigits(phone as string);
 
   const stored = pendingOtps.get(normalised);
   if (!stored) { res.status(400).json({ error: "No pending code. Please request again." }); return; }
@@ -406,10 +424,11 @@ router.post("/auth/forgot-pin/verify-code", async (req, res): Promise<void> => {
   }
   pendingOtps.delete(normalised);
 
+  // Flexible suffix match — same pattern as request-code for consistency
   const [member] = await db
     .select({ id: membersTable.id })
     .from(membersTable)
-    .where(eq(membersTable.phone, normalised));
+    .where(like(membersTable.phone, `%${core}`));
 
   if (!member) { res.status(404).json({ error: "Member account not found" }); return; }
 
