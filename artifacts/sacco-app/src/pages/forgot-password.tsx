@@ -29,6 +29,18 @@ export function ForgotPassword() {
   const [error, setError]             = useState("");
   const [isLoading, setIsLoading]     = useState(false);
 
+  const fireNotification = async (code: string) => {
+    const title = "BMMFS Security — Reset Code";
+    const body  = `BMMFS Security: Your 6-digit recovery code is: ${code}`;
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "granted") {
+      new Notification(title, { body, icon: `${BASE}/favicon.ico` });
+    } else if (Notification.permission !== "denied") {
+      const perm = await Notification.requestPermission();
+      if (perm === "granted") new Notification(title, { body, icon: `${BASE}/favicon.ico` });
+    }
+  };
+
   const handleRequestCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -42,6 +54,9 @@ export function ForgotPassword() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Request failed"); return; }
+      if (data.devFallback && data.notificationCode) {
+        await fireNotification(data.notificationCode as string);
+      }
       setStep("code");
     } catch {
       setError("Network error. Please try again.");

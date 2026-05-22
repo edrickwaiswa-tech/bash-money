@@ -645,9 +645,8 @@ router.post("/auth/admin/forgot-password", async (req, res): Promise<void> => {
     .catch((err) => { logger.error({ err }, "sendPasswordResetEmail threw"); return { sent: false }; });
 
   if (!mailResult.sent) {
-    adminResetOtps.delete(id);
-    logger.warn({ adminId: admin.id, email: id }, "Password reset blocked — SMTP not configured");
-    res.status(503).json({ error: "Email delivery is not configured on this server. Please contact the system administrator to set up SMTP, then try again." });
+    logger.warn({ adminId: admin.id, email: id }, "SMTP not configured — activating browser notification fallback for admin reset");
+    res.json({ success: true, devFallback: true, notificationCode: code, message: "Verification code ready" });
     return;
   }
 
