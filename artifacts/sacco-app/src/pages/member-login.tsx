@@ -16,7 +16,6 @@ export function MemberLogin() {
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [devCode, setDevCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -34,7 +33,6 @@ export function MemberLogin() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Failed to send code"); return; }
-      setDevCode(data.devCode ?? "");
       setStep("otp");
       toast.success("Verification code sent");
     } catch {
@@ -126,7 +124,7 @@ export function MemberLogin() {
             <>
               <div className="px-6 pt-7 pb-5 text-center border-b border-gray-50 relative">
                 <button
-                  onClick={() => { setStep("phone"); setOtp(""); setError(""); setDevCode(""); }}
+                  onClick={() => { setStep("phone"); setOtp(""); setError(""); }}
                   className="absolute left-4 top-5 text-muted-foreground hover:text-[#B03060] transition-colors"
                 >
                   <ArrowLeft className="w-5 h-5" />
@@ -140,14 +138,11 @@ export function MemberLogin() {
                 </p>
               </div>
               <div className="px-6 py-6 space-y-4">
-                {devCode && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
-                    <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider mb-1.5">
-                      Test mode — your code
-                    </p>
-                    <p className="text-3xl font-black tracking-[0.3em] text-amber-700">{devCode}</p>
-                  </div>
-                )}
+                <div className="bg-blue-50 border border-blue-100 rounded-2xl p-3 text-center">
+                  <p className="text-xs text-blue-700 leading-relaxed">
+                    A verification code has been sent to your phone via SMS. Enter it below.
+                  </p>
+                </div>
 
                 <PinInput
                   length={6}

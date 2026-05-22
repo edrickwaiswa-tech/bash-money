@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/protected-route";
 import NotFound from "@/pages/not-found";
 import { Login } from "@/pages/login";
 import { ForgotPin } from "@/pages/forgot-pin";
+import { ForgotPassword } from "@/pages/forgot-password";
 import { Dashboard } from "@/pages/dashboard";
 import { MembersList } from "@/pages/members/index";
 import { MemberDetail } from "@/pages/members/[id]";
@@ -28,6 +29,7 @@ function Router() {
       {/* Public auth routes — no layout */}
       <Route path="/login" component={Login} />
       <Route path="/forgot-pin" component={ForgotPin} />
+      <Route path="/forgot-password" component={ForgotPassword} />
 
       {/* Legacy member login redirect → unified login */}
       <Route path="/my-account" component={MemberLogin} />

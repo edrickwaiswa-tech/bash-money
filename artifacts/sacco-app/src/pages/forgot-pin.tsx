@@ -16,7 +16,6 @@ export function ForgotPin() {
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
-  const [devCode, setDevCode] = useState<string | null>(null);
   const [resetToken, setResetToken] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -36,7 +35,6 @@ export function ForgotPin() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Failed to send code"); return; }
-      setDevCode(data.devCode ?? null);
       setStep("code");
     } finally {
       setIsLoading(false);
@@ -161,7 +159,7 @@ export function ForgotPin() {
             <>
               <div className="px-6 pt-7 pb-5 text-center border-b border-gray-50 relative">
                 <button
-                  onClick={() => { setStep("phone"); setCode(""); setError(""); setDevCode(null); }}
+                  onClick={() => { setStep("phone"); setCode(""); setError(""); }}
                   className="absolute left-4 top-5 text-muted-foreground hover:text-[#B03060] transition-colors"
                 >
                   <ArrowLeft className="w-5 h-5" />
@@ -175,16 +173,10 @@ export function ForgotPin() {
                 </p>
               </div>
               <div className="px-6 py-6 space-y-4">
-                {devCode && (
-                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl px-3 py-3 text-sm">
-                    <Info className="w-4 h-4 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="font-semibold text-xs uppercase tracking-wide mb-0.5">Test mode — SMS simulated</p>
-                      <p className="font-mono text-lg font-bold tracking-widest text-amber-900">{devCode}</p>
-                      <p className="text-xs mt-0.5">This code is also printed in the server console.</p>
-                    </div>
-                  </div>
-                )}
+                <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 text-blue-800 rounded-2xl px-3 py-3 text-sm">
+                  <Info className="w-4 h-4 mt-0.5 shrink-0" />
+                  <p className="text-xs leading-relaxed">A 6-digit code has been sent to your phone via SMS. Enter it below to continue.</p>
+                </div>
 
                 <PinInput
                   length={6}
@@ -215,14 +207,14 @@ export function ForgotPin() {
                   <button
                     type="button"
                     className="text-muted-foreground hover:text-[#1A1A1A] transition-colors font-medium"
-                    onClick={() => { setStep("phone"); setCode(""); setError(""); setDevCode(null); }}
+                    onClick={() => { setStep("phone"); setCode(""); setError(""); }}
                   >
                     ← Change number
                   </button>
                   <button
                     type="button"
                     className="text-[#B03060] hover:underline font-semibold"
-                    onClick={() => { setStep("phone"); setCode(""); setError(""); setDevCode(null); }}
+                    onClick={() => { setStep("phone"); setCode(""); setError(""); }}
                   >
                     Resend code
                   </button>

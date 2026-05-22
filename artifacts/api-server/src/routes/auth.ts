@@ -346,7 +346,7 @@ router.post("/auth/forgot-pin/request-code", async (req, res): Promise<void> => 
   console.log(`  Code: ${code}  (expires in 10 min)`);
   console.log(`${"━".repeat(44)}\n`);
 
-  res.json({ success: true, message: "Verification code generated", devCode: code });
+  res.json({ success: true, message: "Verification code sent to your phone" });
 });
 
 // ── POST /auth/forgot-pin/verify-code ────────────────────────────────────────
@@ -441,7 +441,7 @@ router.post("/auth/member/request-otp", async (req, res): Promise<void> => {
   memberOtps.set(phone as string, { code, expiresAt: Date.now() + 10 * 60 * 1000, memberId: member.id });
   logger.info({ phone, code }, "📱 [SIMULATED SMS] Member Login Code");
   console.log(`\n${"━".repeat(44)}\n  📱 BMMFS Member Login  |  To: ${phone}\n  Code: ${code}\n${"━".repeat(44)}\n`);
-  res.json({ success: true, devCode: code });
+  res.json({ success: true });
 });
 
 router.post("/auth/member/verify-otp", async (req, res): Promise<void> => {
@@ -598,6 +598,75 @@ router.post("/auth/member/logout", async (req, res): Promise<void> => {
     res.clearCookie("connect.sid");
     res.json({ success: true });
   });
+});
+
+// ── Admin password reset via email OTP ───────────────────────────────────────
+const adminResetOtps = new Map<string, { code: string; expiresAt: number; adminId: number }>();
+const adminResetTokens = new Map<string, { adminId: number; expiresAt: number }>();
+
+router.post("/auth/admin/forgot-password", async (req, res): Promise<void> => {
+  const { email } = req.body;
+  if (!email) { res.status(400).json({ error: "Email is required" }); return; }
+  const id = (email as string).trim().toLowerCase();
+
+  const [admin] = await db.select({ id: adminUsersTable.id, email: adminUsersTable.email, fullName: adminUsersTable.fullName })
+    .from(adminUsersTable).where(eq(adminUsersTable.email, id));
+  if (!admin) {
+    // Respond with same message regardless to avoid email enumeration
+    res.json({ success: true, message: "If that email is registered, a reset code has been sent." });
+    return;
+  }
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  adminResetOtps.set(id, { code, expiresAt: Date.now() + 10 * 60 * 1000, adminId: admin.id });
+
+  const { sendPasswordResetEmail } = await import("../lib/mailer.js");
+  sendPasswordResetEmail({ toEmail: id, adminName: admin.fullName ?? id, code })
+    .catch((err) => logger.error({ err }, "sendPasswordResetEmail failed"));
+
+  logger.info({ adminId: admin.id, email: id }, "Admin password reset code generated");
+  res.json({ success: true, message: "If that email is registered, a reset code has been sent." });
+});
+
+router.post("/auth/admin/verify-reset-code", async (req, res): Promise<void> => {
+  const { email, code } = req.body;
+  if (!email || !code) { res.status(400).json({ error: "Email and code are required" }); return; }
+  const id = (email as string).trim().toLowerCase();
+
+  const stored = adminResetOtps.get(id);
+  if (!stored) { res.status(400).json({ error: "No pending code. Please request again." }); return; }
+  if (Date.now() > stored.expiresAt) {
+    adminResetOtps.delete(id);
+    res.status(400).json({ error: "Code expired. Please request a new one." }); return;
+  }
+  if (stored.code !== (code as string).trim()) {
+    res.status(400).json({ error: "Incorrect code. Please try again." }); return;
+  }
+  adminResetOtps.delete(id);
+
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  adminResetTokens.set(resetToken, { adminId: stored.adminId, expiresAt: Date.now() + 10 * 60 * 1000 });
+  logger.info({ adminId: stored.adminId }, "Admin password reset token issued");
+  res.json({ resetToken });
+});
+
+router.post("/auth/admin/reset-password", async (req, res): Promise<void> => {
+  const { resetToken, newPassword } = req.body;
+  if (!resetToken || !newPassword) { res.status(400).json({ error: "Reset token and new password are required" }); return; }
+  if ((newPassword as string).length < 6) { res.status(400).json({ error: "Password must be at least 6 characters" }); return; }
+
+  const tokenData = adminResetTokens.get(resetToken as string);
+  if (!tokenData) { res.status(400).json({ error: "Invalid or expired reset token" }); return; }
+  if (Date.now() > tokenData.expiresAt) {
+    adminResetTokens.delete(resetToken as string);
+    res.status(400).json({ error: "Reset session expired. Please start over." }); return;
+  }
+  adminResetTokens.delete(resetToken as string);
+
+  const passwordHash = await bcrypt.hash(newPassword as string, 12);
+  await db.update(adminUsersTable).set({ passwordHash, pinHash: null }).where(eq(adminUsersTable.id, tokenData.adminId));
+  logger.info({ adminId: tokenData.adminId }, "Admin password reset successfully");
+  res.json({ success: true });
 });
 
 export default router;
