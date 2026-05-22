@@ -337,21 +337,39 @@ router.post("/auth/forgot-pin/request-code", async (req, res): Promise<void> => 
     res.status(404).json({ error: "No account found for this phone number" }); return;
   }
 
-  // Testing override — fixed master code; real SMS delivery attempted then falls back
-  const TEST_CODE = "123456";
-  const code = TEST_CODE;
-  const expiresAt = Date.now() + 30 * 60 * 1000; // 30 min for testing
+  const DEV_CODE = "123456";
+  const twilioReady = !!(process.env.TWILIO_ACCOUNT_SID?.trim() && process.env.TWILIO_AUTH_TOKEN?.trim() && process.env.TWILIO_PHONE_NUMBER?.trim());
+  const expiresAt = Date.now() + 30 * 60 * 1000;
+
+  if (!twilioReady) {
+    // No credentials — use fixed test code and notify via browser alert
+    pendingOtps.set(phone as string, { code: DEV_CODE, expiresAt });
+    logger.warn({ phone }, "Twilio not configured — PIN reset using devFallback code 123456");
+    res.json({ success: true, devFallback: true, notificationCode: DEV_CODE, message: "Verification code ready" });
+    return;
+  }
+
+  // Credentials present — generate real code and send via Twilio
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
   pendingOtps.set(phone as string, { code, expiresAt });
 
-  // Attempt real SMS; if it fails for any reason trigger the UI fallback immediately
-  sendSms({
+  const smsResult = await sendSms({
     to: phone as string,
-    body: `BMMFS PIN Reset: Your verification code is ${code}. Expires in 30 minutes.`,
+    body: `BMMFS PIN Reset: Your verification code is ${code}. Valid for 30 minutes. Do not share this code.`,
     code,
-  }).catch(() => {/* silent — UI fallback handles it */});
+  });
 
-  logger.info({ phone }, "PIN reset code set — devFallback active");
-  res.json({ success: true, devFallback: true, notificationCode: code, message: "Verification code ready" });
+  logger.info({ phone, delivered: smsResult.delivered }, "PIN reset code dispatched");
+
+  if (!smsResult.delivered && smsResult.devFallback) {
+    // Twilio call failed — switch stored code to DEV_CODE so user can still proceed
+    pendingOtps.set(phone as string, { code: DEV_CODE, expiresAt });
+    logger.warn({ phone }, "Twilio delivery failed — switching stored code to devFallback 123456");
+    res.json({ success: true, devFallback: true, notificationCode: DEV_CODE, message: "Verification code ready" });
+    return;
+  }
+
+  res.json({ success: true, message: "Verification code sent to your phone" });
 });
 
 // ── POST /auth/forgot-pin/verify-code ────────────────────────────────────────
@@ -442,19 +460,36 @@ router.post("/auth/member/request-otp", async (req, res): Promise<void> => {
   const [member] = await db.select({ id: membersTable.id, phone: membersTable.phone })
     .from(membersTable).where(eq(membersTable.phone, phone as string));
   if (!member) { res.status(404).json({ error: "No account found for this phone number" }); return; }
-  // Testing override — fixed master code; real SMS attempted then falls back
-  const TEST_CODE = "123456";
-  const code = TEST_CODE;
-  memberOtps.set(phone as string, { code, expiresAt: Date.now() + 30 * 60 * 1000, memberId: member.id });
+  const DEV_CODE = "123456";
+  const twilioReady = !!(process.env.TWILIO_ACCOUNT_SID?.trim() && process.env.TWILIO_AUTH_TOKEN?.trim() && process.env.TWILIO_PHONE_NUMBER?.trim());
+  const expiresAt = Date.now() + 30 * 60 * 1000;
 
-  sendSms({
+  if (!twilioReady) {
+    memberOtps.set(phone as string, { code: DEV_CODE, expiresAt, memberId: member.id });
+    logger.warn({ phone }, "Twilio not configured — member OTP using devFallback code 123456");
+    res.json({ success: true, devFallback: true, notificationCode: DEV_CODE });
+    return;
+  }
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  memberOtps.set(phone as string, { code, expiresAt, memberId: member.id });
+
+  const smsResult = await sendSms({
     to: phone as string,
-    body: `BMMFS Member Login: Your verification code is ${code}.`,
+    body: `BMMFS Member Login: Your verification code is ${code}. Valid for 30 minutes. Do not share this code.`,
     code,
-  }).catch(() => {/* silent — UI fallback handles it */});
+  });
 
-  logger.info({ phone }, "Member OTP set — devFallback active");
-  res.json({ success: true, devFallback: true, notificationCode: code });
+  logger.info({ phone, delivered: smsResult.delivered }, "Member OTP dispatched");
+
+  if (!smsResult.delivered && smsResult.devFallback) {
+    memberOtps.set(phone as string, { code: DEV_CODE, expiresAt, memberId: member.id });
+    logger.warn({ phone }, "Twilio delivery failed — switching stored code to devFallback 123456");
+    res.json({ success: true, devFallback: true, notificationCode: DEV_CODE });
+    return;
+  }
+
+  res.json({ success: true });
 });
 
 router.post("/auth/member/verify-otp", async (req, res): Promise<void> => {
@@ -630,18 +665,34 @@ router.post("/auth/admin/forgot-password", async (req, res): Promise<void> => {
     return;
   }
 
-  // Testing override — fixed master code; real email attempted in background then falls back
-  const TEST_CODE = "123456";
-  const code = TEST_CODE;
-  adminResetOtps.set(id, { code, expiresAt: Date.now() + 30 * 60 * 1000, adminId: admin.id });
+  const DEV_CODE = "123456";
+  const smtpConfigured = !!(process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim());
+  const expiresAt = Date.now() + 30 * 60 * 1000;
 
-  // Fire email in background — don't wait, UI fallback is always active
-  import("../lib/mailer.js").then(({ sendPasswordResetEmail }) =>
-    sendPasswordResetEmail({ toEmail: id, adminName: admin.fullName ?? id, code })
-  ).catch(() => {/* silent */});
+  if (!smtpConfigured) {
+    adminResetOtps.set(id, { code: DEV_CODE, expiresAt, adminId: admin.id });
+    logger.warn({ email: id }, "Brevo SMTP not configured — admin reset using devFallback code 123456");
+    res.json({ success: true, devFallback: true, notificationCode: DEV_CODE, message: "Verification code ready" });
+    return;
+  }
 
-  logger.info({ adminId: admin.id, email: id }, "Admin reset code set — devFallback active");
-  res.json({ success: true, devFallback: true, notificationCode: code, message: "Verification code ready" });
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  adminResetOtps.set(id, { code, expiresAt, adminId: admin.id });
+
+  const { sendPasswordResetEmail } = await import("../lib/mailer.js");
+  const mailResult = await sendPasswordResetEmail({ toEmail: id, adminName: admin.fullName ?? id, code })
+    .catch((err) => { logger.error({ err }, "sendPasswordResetEmail threw"); return { sent: false }; });
+
+  if (!mailResult.sent) {
+    // Email failed — switch to DEV_CODE so user can still proceed
+    adminResetOtps.set(id, { code: DEV_CODE, expiresAt, adminId: admin.id });
+    logger.warn({ adminId: admin.id, email: id }, "Brevo SMTP delivery failed — switching stored code to devFallback 123456");
+    res.json({ success: true, devFallback: true, notificationCode: DEV_CODE, message: "Verification code ready" });
+    return;
+  }
+
+  logger.info({ adminId: admin.id, email: id }, "Admin password reset email sent via Brevo");
+  res.json({ success: true, message: "If that email is registered, a reset code has been sent." });
 });
 
 router.post("/auth/admin/verify-reset-code", async (req, res): Promise<void> => {
