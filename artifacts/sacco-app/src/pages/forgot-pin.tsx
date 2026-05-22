@@ -2,19 +2,42 @@ import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PinInput } from "@/components/pin-input";
 import { BmmLogo } from "@/components/bmm-logo";
-import { ArrowLeft, Mail, KeyRound, CheckCircle, AlertCircle, Info } from "lucide-react";
+import { ArrowLeft, Phone, KeyRound, CheckCircle, AlertCircle, Info } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-type Step = "email" | "code" | "new-pin" | "success";
+type Step = "phone" | "code" | "new-pin" | "success";
+
+/**
+ * Normalises a Ugandan (or any) phone number to strict E.164 before sending.
+ * Examples:
+ *   "0746724455"    → "+256746724455"
+ *   "07 467 24455"  → "+256746724455"
+ *   "+256746724455" → "+256746724455"
+ *   "256746724455"  → "+256746724455"
+ */
+function normalisePhone(raw: string): string {
+  const stripped = raw.replace(/[\s\-().]/g, "");
+  // Local Ugandan format: starts with 0 (e.g. 07xxxxxxxx)
+  if (/^0\d{9}$/.test(stripped)) {
+    return "+256" + stripped.slice(1);
+  }
+  // International without +
+  if (/^256\d{9}$/.test(stripped)) {
+    return "+" + stripped;
+  }
+  // Already has +
+  if (stripped.startsWith("+")) return stripped;
+  // Fallback: prepend +
+  return "+" + stripped;
+}
 
 export function ForgotPin() {
   const [, navigate] = useLocation();
-  const [step, setStep] = useState<Step>("email");
-  const [email, setEmail] = useState("");
+  const [step, setStep] = useState<Step>("phone");
+  const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [resetToken, setResetToken] = useState("");
   const [newPin, setNewPin] = useState("");
@@ -38,11 +61,12 @@ export function ForgotPin() {
     setError("");
     setIsLoading(true);
     try {
+      const formatted = normalisePhone(phone);
       const res = await fetch(`${BASE}/api/auth/forgot-pin/request-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ phone: formatted }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Failed to send code"); return; }
@@ -65,7 +89,7 @@ export function ForgotPin() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ email, code: codeToCheck }),
+        body: JSON.stringify({ phone: normalisePhone(phone), code: codeToCheck }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Verification failed"); setCode(""); return; }
@@ -114,32 +138,35 @@ export function ForgotPin() {
       <div className="flex-1 px-4 -mt-8 flex flex-col max-w-sm mx-auto w-full">
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
 
-          {/* ── Step 1: Email ── */}
-          {step === "email" && (
+          {/* ── Step 1: Phone ── */}
+          {step === "phone" && (
             <>
               <div className="px-6 pt-7 pb-5 text-center border-b border-gray-50">
                 <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-[#B03060]/8 mb-3">
-                  <Mail className="w-5 h-5 text-[#B03060]" />
+                  <Phone className="w-5 h-5 text-[#B03060]" />
                 </div>
                 <p className="font-bold text-[#1A1A1A] text-base">Forgot PIN</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Enter your registered email to receive a secure reset code.
+                  Enter your registered phone number to receive a verification code via SMS.
                 </p>
               </div>
               <div className="px-6 py-6">
                 <form onSubmit={handleRequestCode} className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Email Address</label>
+                    <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Phone Number</label>
                     <Input
-                      type="email"
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      type="tel"
+                      placeholder="0746 724 455 or +256 746 724 455"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
                       required
                       disabled={isLoading}
                       autoFocus
                       className="text-center rounded-xl border-[#B03060]/15 focus-visible:ring-[#B03060] h-11"
                     />
+                    <p className="text-[10px] text-muted-foreground text-center">
+                      You can enter a local number (07...) — it will be formatted automatically.
+                    </p>
                   </div>
 
                   {error && (
@@ -153,7 +180,7 @@ export function ForgotPin() {
                     type="submit"
                     className="w-full h-11 rounded-xl text-white font-semibold"
                     style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
-                    disabled={isLoading || !email}
+                    disabled={isLoading || !phone}
                   >
                     {isLoading ? "Checking..." : "Send verification code"}
                   </Button>
@@ -173,7 +200,7 @@ export function ForgotPin() {
             <>
               <div className="px-6 pt-7 pb-5 text-center border-b border-gray-50 relative">
                 <button
-                  onClick={() => { setStep("email"); setCode(""); setError(""); }}
+                  onClick={() => { setStep("phone"); setCode(""); setError(""); }}
                   className="absolute left-4 top-5 text-muted-foreground hover:text-[#B03060] transition-colors"
                 >
                   <ArrowLeft className="w-5 h-5" />
@@ -183,13 +210,13 @@ export function ForgotPin() {
                 </div>
                 <p className="font-bold text-[#1A1A1A] text-base">Enter verification code</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  A 6-digit code was sent to <span className="font-semibold text-[#B03060]">{email}</span>
+                  A 6-digit code was sent via SMS to <span className="font-semibold text-[#B03060]">{normalisePhone(phone)}</span>
                 </p>
               </div>
               <div className="px-6 py-6 space-y-4">
                 <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 text-blue-800 rounded-2xl px-3 py-3 text-sm">
                   <Info className="w-4 h-4 mt-0.5 shrink-0" />
-                  <p className="text-xs leading-relaxed">A 6-digit code has been sent to your email address. Enter it below to continue.</p>
+                  <p className="text-xs leading-relaxed">Check your SMS messages for a 6-digit code from BMMFS. Enter it below to continue.</p>
                 </div>
 
                 <PinInput
@@ -221,14 +248,14 @@ export function ForgotPin() {
                   <button
                     type="button"
                     className="text-muted-foreground hover:text-[#1A1A1A] transition-colors font-medium"
-                    onClick={() => { setStep("email"); setCode(""); setError(""); }}
+                    onClick={() => { setStep("phone"); setCode(""); setError(""); }}
                   >
-                    ← Change email
+                    ← Change number
                   </button>
                   <button
                     type="button"
                     className="text-[#B03060] hover:underline font-semibold"
-                    onClick={() => { setStep("email"); setCode(""); setError(""); }}
+                    onClick={() => { setStep("phone"); setCode(""); setError(""); }}
                   >
                     Resend code
                   </button>

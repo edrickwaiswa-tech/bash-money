@@ -17,6 +17,21 @@ const pendingOtps  = new Map<string, { code: string; expiresAt: number }>();
 const resetTokens  = new Map<string, { memberId: number; expiresAt: number }>();  // member-only
 const memberOtps   = new Map<string, { code: string; expiresAt: number; memberId: number }>();
 
+// ── Phone normalisation ───────────────────────────────────────────────────────
+// Converts any Ugandan or international number to strict E.164 format.
+// Examples:
+//   "0746724455"    → "+256746724455"   (Uganda local, leading 0 stripped)
+//   "07 467 24455"  → "+256746724455"   (spaces stripped)
+//   "+256746724455" → "+256746724455"   (already correct)
+//   "256746724455"  → "+256746724455"   (missing leading +)
+function normalisePhone(raw: string): string {
+  const s = raw.replace(/[\s\-().]/g, "");
+  if (/^0\d{9}$/.test(s)) return "+256" + s.slice(1);   // 07xxxxxxxx
+  if (/^256\d{9}$/.test(s)) return "+" + s;              // 256xxxxxxxx
+  if (s.startsWith("+")) return s;
+  return "+" + s;
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function getIp(req: Parameters<typeof router.post>[1] extends (req: infer R, ...a: any[]) => any ? R : never): string {
   const fwd = req.headers["x-forwarded-for"];
@@ -323,74 +338,78 @@ router.post("/auth/admin/upload/profile-picture-data", async (req, res): Promise
 });
 
 // ── POST /auth/forgot-pin/request-code ───────────────────────────────────────
-// Used by members who forget their PIN (email OTP flow via Brevo)
+// Used by members who forget their PIN (SMS OTP flow via Twilio)
 router.post("/auth/forgot-pin/request-code", async (req, res): Promise<void> => {
-  const { email } = req.body;
-  if (!email) { res.status(400).json({ error: "Email address is required" }); return; }
+  const { phone } = req.body;
+  if (!phone) { res.status(400).json({ error: "Phone number is required" }); return; }
 
-  const id = (email as string).trim().toLowerCase();
+  // Normalise to E.164 — handles Uganda local format: 07xxxxxxxx → +2567xxxxxxxx
+  const normalised = normalisePhone(phone as string);
 
   const [member] = await db
-    .select({ id: membersTable.id, name: membersTable.name, email: membersTable.email })
+    .select({ id: membersTable.id, phone: membersTable.phone })
     .from(membersTable)
-    .where(eq(membersTable.email, id));
+    .where(eq(membersTable.phone, normalised));
 
   if (!member) {
-    res.status(404).json({ error: "No account found for this email address" }); return;
+    res.status(404).json({ error: "No account found for this phone number" }); return;
   }
 
   const DEV_CODE = "123456";
-  const smtpConfigured = !!(process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim());
+  const twilioReady = !!(process.env.TWILIO_ACCOUNT_SID?.trim() && process.env.TWILIO_AUTH_TOKEN?.trim() && process.env.TWILIO_PHONE_NUMBER?.trim());
   const expiresAt = Date.now() + 30 * 60 * 1000;
 
-  if (!smtpConfigured) {
-    pendingOtps.set(id, { code: DEV_CODE, expiresAt });
-    logger.warn({ email: id }, "SMTP not configured — PIN reset using devFallback code 123456");
+  if (!twilioReady) {
+    pendingOtps.set(normalised, { code: DEV_CODE, expiresAt });
+    logger.warn({ phone: normalised }, "Twilio not configured — PIN reset using devFallback code 123456");
     res.json({ success: true, devFallback: true, notificationCode: DEV_CODE, message: "Verification code ready" });
     return;
   }
 
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  pendingOtps.set(id, { code, expiresAt });
+  pendingOtps.set(normalised, { code, expiresAt });
 
-  const { sendMemberPinResetEmail } = await import("../lib/mailer.js");
-  const mailResult = await sendMemberPinResetEmail({ toEmail: id, memberName: member.name, code })
-    .catch((err) => { logger.error({ err }, "sendMemberPinResetEmail threw"); return { sent: false }; });
+  const smsResult = await sendSms({
+    to: normalised,
+    body: `BMMFS PIN Reset: Your verification code is ${code}. Valid for 30 minutes. Do not share this code.`,
+    code,
+  });
 
-  if (!mailResult.sent) {
-    pendingOtps.set(id, { code: DEV_CODE, expiresAt });
-    logger.warn({ email: id }, "Brevo delivery failed — switching stored code to devFallback 123456");
+  logger.info({ phone: normalised, delivered: smsResult.delivered }, "PIN reset code dispatched");
+
+  if (!smsResult.delivered && smsResult.devFallback) {
+    pendingOtps.set(normalised, { code: DEV_CODE, expiresAt });
+    logger.warn({ phone: normalised }, "Twilio delivery failed — switching stored code to devFallback 123456");
     res.json({ success: true, devFallback: true, notificationCode: DEV_CODE, message: "Verification code ready" });
     return;
   }
 
-  logger.info({ email: id }, "Member PIN reset code sent via Brevo");
-  res.json({ success: true, message: "Verification code sent to your email" });
+  res.json({ success: true, message: "Verification code sent to your phone" });
 });
 
 // ── POST /auth/forgot-pin/verify-code ────────────────────────────────────────
 // Verifies the OTP, issues a short-lived member reset token
 router.post("/auth/forgot-pin/verify-code", async (req, res): Promise<void> => {
-  const { email, code } = req.body;
-  if (!email || !code) { res.status(400).json({ error: "Email and code are required" }); return; }
+  const { phone, code } = req.body;
+  if (!phone || !code) { res.status(400).json({ error: "Phone and code are required" }); return; }
 
-  const id = (email as string).trim().toLowerCase();
+  const normalised = normalisePhone(phone as string);
 
-  const stored = pendingOtps.get(id);
+  const stored = pendingOtps.get(normalised);
   if (!stored) { res.status(400).json({ error: "No pending code. Please request again." }); return; }
   if (Date.now() > stored.expiresAt) {
-    pendingOtps.delete(id);
+    pendingOtps.delete(normalised);
     res.status(400).json({ error: "Code has expired. Please request a new one." }); return;
   }
   if (stored.code !== (code as string)) {
     res.status(400).json({ error: "Incorrect code. Please try again." }); return;
   }
-  pendingOtps.delete(id);
+  pendingOtps.delete(normalised);
 
   const [member] = await db
     .select({ id: membersTable.id })
     .from(membersTable)
-    .where(eq(membersTable.email, id));
+    .where(eq(membersTable.phone, normalised));
 
   if (!member) { res.status(404).json({ error: "Member account not found" }); return; }
 

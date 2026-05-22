@@ -6,23 +6,22 @@ export type SmsDelivery =
 
 /**
  * Normalises any phone number to strict E.164 format.
- * Strips all whitespace, hyphens, parentheses and dots.
- * Ensures the result begins with exactly one '+'.
- * Examples:
- *   "+256 746 724 455"  → "+256746724455"
- *   "256-746-724-455"   → "+256746724455"
- *   "+1 912-937-6433"   → "+19129376433"
+ * Handles Ugandan local format (07xxxxxxxx → +2567xxxxxxxx) as well as
+ * standard international numbers with or without the leading +.
  */
 function toE164(raw: string): string {
-  // Remove every character that is not a digit or a leading '+'
-  let digits = raw.replace(/[^\d+]/g, "");
-  // Collapse multiple '+' signs and ensure exactly one at the front
-  digits = digits.replace(/\++/g, "+");
-  if (!digits.startsWith("+")) {
-    digits = "+" + digits;
-  }
-  return digits;
+  const s = raw.replace(/[\s\-().]/g, "");
+  // Uganda local: 07xxxxxxxx (10 digits starting with 0)
+  if (/^0\d{9}$/.test(s)) return "+256" + s.slice(1);
+  // Uganda without country code +: 256xxxxxxxx
+  if (/^256\d{9}$/.test(s)) return "+" + s;
+  // Strip all non-digit/+ characters and ensure a single leading +
+  const digits = s.replace(/[^\d+]/g, "").replace(/\++/g, "+");
+  return digits.startsWith("+") ? digits : "+" + digits;
 }
+
+// Twilio trial number fallback — used only if TWILIO_PHONE_NUMBER is absent
+const TWILIO_FALLBACK_FROM = "+19129376433";
 
 /**
  * Sends an SMS via Twilio.
@@ -40,10 +39,12 @@ export async function sendSms(params: {
 
   const sid  = process.env.TWILIO_ACCOUNT_SID?.trim();
   const auth = process.env.TWILIO_AUTH_TOKEN?.trim();
-  const from = process.env.TWILIO_PHONE_NUMBER?.trim();
+  // Use env var if set; fall back to the known trial number so the env var
+  // being absent never silently breaks dispatch.
+  const from = process.env.TWILIO_PHONE_NUMBER?.trim() || TWILIO_FALLBACK_FROM;
 
-  if (!sid || !auth || !from) {
-    logger.warn({ to: rawTo }, "Twilio not configured — devFallback active");
+  if (!sid || !auth) {
+    logger.warn({ to: rawTo }, "Twilio credentials missing — devFallback active");
     return { delivered: false, devFallback: true, notificationCode: code };
   }
 
