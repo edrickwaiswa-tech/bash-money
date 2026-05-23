@@ -45,17 +45,6 @@ export function ForgotPin() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const fireNotification = async (code: string) => {
-    window.alert(`BMMFS Security\n\nDevelopment Fallback: Your recovery code is ${code}\n\nEnter this code on the next screen.`);
-    if (!("Notification" in window)) return;
-    if (Notification.permission === "granted") {
-      new Notification("BMMFS — Verification Code", { body: `Development Fallback: Your recovery code is ${code}` });
-    } else if (Notification.permission !== "denied") {
-      const perm = await Notification.requestPermission();
-      if (perm === "granted") new Notification("BMMFS — Verification Code", { body: `Development Fallback: Your recovery code is ${code}` });
-    }
-  };
-
   const handleRequestCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -70,9 +59,6 @@ export function ForgotPin() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Failed to send code"); return; }
-      if (data.devFallback && data.notificationCode) {
-        await fireNotification(data.notificationCode as string);
-      }
       setStep("code");
     } finally {
       setIsLoading(false);

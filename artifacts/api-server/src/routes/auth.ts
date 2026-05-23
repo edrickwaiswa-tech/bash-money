@@ -369,16 +369,13 @@ router.post("/auth/forgot-pin/request-code", async (req, res): Promise<void> => 
     res.status(404).json({ error: "No account found for this phone number" }); return;
   }
 
-  // Use the stored DB phone as the Brevo destination — normalised to E.164.
+  // Use the stored DB phone as the Twilio destination — normalised to E.164.
   const smsTo = normalisePhone(member.phone);
-  const DEV_CODE = "123456";
-  const brevoSmsReady = !!process.env.SMTP_PASS?.trim();
+  const twilioReady = !!(process.env.TWILIO_ACCOUNT_SID?.trim() && process.env.TWILIO_AUTH_TOKEN?.trim() && process.env.TWILIO_PHONE_NUMBER?.trim());
   const expiresAt = Date.now() + 10 * 60 * 1000;
 
-  if (!brevoSmsReady) {
-    pendingOtps.set(normalised, { code: DEV_CODE, expiresAt });
-    logger.warn({ phone: smsTo }, "Brevo API key not configured — PIN reset using devFallback code 123456");
-    res.json({ success: true, devFallback: true, notificationCode: DEV_CODE, message: "Verification code ready" });
+  if (!twilioReady) {
+    res.status(503).json({ error: "SMS service is not configured. Please contact support." });
     return;
   }
 
@@ -388,15 +385,13 @@ router.post("/auth/forgot-pin/request-code", async (req, res): Promise<void> => 
   const smsResult = await sendSms({
     to:   smsTo,
     body: `Your BMMFS verification code is: ${code}. Expires in 10 minutes.`,
-    code,
   });
 
-  logger.info({ phone: smsTo, delivered: smsResult.delivered }, "PIN reset code dispatched via Brevo SMS");
+  logger.info({ phone: smsTo, delivered: smsResult.delivered }, "PIN reset code dispatched via Twilio");
 
-  if (!smsResult.delivered && smsResult.devFallback) {
-    pendingOtps.set(normalised, { code: DEV_CODE, expiresAt });
-    logger.warn({ phone: smsTo }, "Brevo SMS delivery failed — switching stored code to devFallback 123456");
-    res.json({ success: true, devFallback: true, notificationCode: DEV_CODE, message: "Verification code ready" });
+  if (!smsResult.delivered) {
+    pendingOtps.delete(normalised);
+    res.status(502).json({ error: "Could not send verification code. Please try again." });
     return;
   }
 
@@ -494,14 +489,11 @@ router.post("/auth/member/request-otp", async (req, res): Promise<void> => {
   const [member] = await db.select({ id: membersTable.id, phone: membersTable.phone })
     .from(membersTable).where(eq(membersTable.phone, phone as string));
   if (!member) { res.status(404).json({ error: "No account found for this phone number" }); return; }
-  const DEV_CODE = "123456";
-  const brevoSmsReady = !!process.env.SMTP_PASS?.trim();
+  const twilioReady = !!(process.env.TWILIO_ACCOUNT_SID?.trim() && process.env.TWILIO_AUTH_TOKEN?.trim() && process.env.TWILIO_PHONE_NUMBER?.trim());
   const expiresAt = Date.now() + 10 * 60 * 1000;
 
-  if (!brevoSmsReady) {
-    memberOtps.set(phone as string, { code: DEV_CODE, expiresAt, memberId: member.id });
-    logger.warn({ phone }, "Brevo API key not configured — member OTP using devFallback code 123456");
-    res.json({ success: true, devFallback: true, notificationCode: DEV_CODE });
+  if (!twilioReady) {
+    res.status(503).json({ error: "SMS service is not configured. Please contact support." });
     return;
   }
 
@@ -509,17 +501,15 @@ router.post("/auth/member/request-otp", async (req, res): Promise<void> => {
   memberOtps.set(phone as string, { code, expiresAt, memberId: member.id });
 
   const smsResult = await sendSms({
-    to: phone as string,
+    to:   member.phone,
     body: `Your BMMFS verification code is: ${code}. Expires in 10 minutes.`,
-    code,
   });
 
-  logger.info({ phone, delivered: smsResult.delivered }, "Member OTP dispatched via Brevo SMS");
+  logger.info({ phone, delivered: smsResult.delivered }, "Member OTP dispatched via Twilio");
 
-  if (!smsResult.delivered && smsResult.devFallback) {
-    memberOtps.set(phone as string, { code: DEV_CODE, expiresAt, memberId: member.id });
-    logger.warn({ phone }, "Brevo SMS delivery failed — switching stored code to devFallback 123456");
-    res.json({ success: true, devFallback: true, notificationCode: DEV_CODE });
+  if (!smsResult.delivered) {
+    memberOtps.delete(phone as string);
+    res.status(502).json({ error: "Could not send verification code. Please try again." });
     return;
   }
 
