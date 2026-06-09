@@ -2,13 +2,14 @@ databases:
   - name: bash-m-money-db
     databaseName: bash_m_money
     user: bash_m_money
+    plan: free
 
 services:
   - type: web
     name: bash-m-money-api
     runtime: node
     rootDir: .
-    plan: starter
+    plan: free
     buildCommand: corepack enable && corepack pnpm install --frozen-lockfile && corepack pnpm --filter @workspace/api-server run build
     startCommand: corepack pnpm --filter @workspace/api-server run start
     envVars:
