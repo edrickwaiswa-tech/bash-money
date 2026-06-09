@@ -10,9 +10,11 @@ services:
     runtime: node
     rootDir: .
     plan: free
-    buildCommand: corepack enable && corepack pnpm install --frozen-lockfile && corepack pnpm --filter @workspace/api-server run build
+    buildCommand: corepack pnpm install --frozen-lockfile && corepack pnpm --filter @workspace/api-server run build
     startCommand: corepack pnpm --filter @workspace/api-server run start
     envVars:
+      - key: NODE_VERSION
+        value: 22.19.0
       - key: NODE_ENV
         value: production
       - key: LOG_LEVEL
