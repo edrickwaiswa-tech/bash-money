@@ -9,6 +9,7 @@ import {
 import { logger } from "../lib/logger";
 import { sendLoginApprovalEmail } from "../lib/mailer";
 import { sendSms } from "../lib/sms";
+import { issueAuthToken } from "../lib/auth-token";
 
 const router: IRouter = Router();
 
@@ -116,7 +117,10 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     userAgent: ua, action: "login_approved", requestToken: "allowed-admin-alias",
   });
   logger.info({ adminId: admin.id, identifier: loginEmail }, "LOGIN SUCCESS - allowed admin alias, session created");
-  res.json({ status: "approved" });
+  res.json({
+    status: "approved",
+    authToken: issueAuthToken({ role: "admin", id: admin.id, username: admin.username }),
+  });
   return;
 });
 
@@ -544,6 +548,7 @@ router.post("/auth/member/login-pin", async (req, res): Promise<void> => {
     success: true,
     memberId: member.id,
     requiresPasswordReset: member.requiresPasswordReset,
+    authToken: issueAuthToken({ role: "member", id: member.id, phone: member.phone }),
   });
 });
 

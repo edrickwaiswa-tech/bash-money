@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/contexts/auth";
+import { setStoredAuthToken } from "@/lib/api-base";
 import { BmmLogo } from "@/components/bmm-logo";
 import {
   ShieldCheck, Lock, Eye, EyeOff, Mail,
@@ -286,6 +287,7 @@ export function Login() {
       }
       if (data.status === "approved") {
         // Owner bypass — session already set, go straight to dashboard
+        if (data.authToken) setStoredAuthToken(data.authToken);
         await refreshProfile();
         navigate("/");
         return;
@@ -320,6 +322,7 @@ export function Login() {
       });
       const data = await res.json();
       if (!res.ok) { setMemberError(data.error ?? "Login failed"); return; }
+      if (data.authToken) setStoredAuthToken(data.authToken);
       navigate("/my-account/portal");
     } catch {
       setMemberError("Network error. Please try again.");

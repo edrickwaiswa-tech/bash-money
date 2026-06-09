@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { setStoredAuthToken } from "@/lib/api-base";
 
 export interface AuthUser {
   id: number;
@@ -53,12 +54,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await res.json();
       throw new Error(data.error ?? "Login failed");
     }
+    const data = await res.clone().json().catch(() => null);
+    if (data?.authToken) setStoredAuthToken(data.authToken);
     // Re-fetch full profile (login returns minimal data; /me returns everything)
     await fetchMe();
   };
 
   const logout = async () => {
     await fetch(`${BASE}/api/auth/logout`, { method: "POST", credentials: "include" });
+    setStoredAuthToken(null);
     setUser(null);
   };
 

@@ -7,6 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { attachBearerAuth } from "./middlewares/bearer-auth";
 const PgStore = connectPgSimple(session);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -58,6 +59,7 @@ app.use(
   }),
 );
 
+app.use(attachBearerAuth);
 app.use("/api", router);
 
 // Serve uploaded files as static assets
