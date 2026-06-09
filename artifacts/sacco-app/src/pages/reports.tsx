@@ -101,7 +101,7 @@ export function Reports() {
     setLoading(true);
     try {
       const url = `${BASE}/api/reports/transactions?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`;
-      const res = await fetch(url, { credentials: "same-origin" });
+      const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch report");
       setData(await res.json());
     } catch {

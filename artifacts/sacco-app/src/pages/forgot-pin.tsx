@@ -54,7 +54,7 @@ export function ForgotPin() {
       const res = await fetch(`${BASE}/api/auth/forgot-pin/request-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify({ phone: formatted }),
       });
       const data = await res.json();
@@ -74,7 +74,7 @@ export function ForgotPin() {
       const res = await fetch(`${BASE}/api/auth/forgot-pin/verify-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify({ phone: normalisePhone(phone), code: codeToCheck }),
       });
       const data = await res.json();
@@ -96,7 +96,7 @@ export function ForgotPin() {
       const res = await fetch(`${BASE}/api/auth/forgot-pin/reset-pin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify({ resetToken, pin: newPin }),
       });
       const data = await res.json();

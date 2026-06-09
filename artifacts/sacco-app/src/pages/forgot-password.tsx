@@ -48,7 +48,7 @@ export function ForgotPassword() {
       const res = await fetch(`${BASE}/api/auth/admin/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
       const data = await res.json();
@@ -73,7 +73,7 @@ export function ForgotPassword() {
       const res = await fetch(`${BASE}/api/auth/admin/verify-reset-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify({ email: email.trim().toLowerCase(), code: codeToCheck }),
       });
       const data = await res.json();
@@ -97,7 +97,7 @@ export function ForgotPassword() {
       const res = await fetch(`${BASE}/api/auth/admin/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify({ resetToken, newPassword }),
       });
       const data = await res.json();

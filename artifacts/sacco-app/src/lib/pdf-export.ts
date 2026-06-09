@@ -73,7 +73,7 @@ function formatDateOnly(dateString: string): string {
 /** Fetch an image URL and render it as a circular PNG data-URL via canvas. */
 async function loadCircularImage(url: string, diameter: number): Promise<string | null> {
   try {
-    const res = await fetch(url, { credentials: "same-origin" });
+    const res = await fetch(url, { credentials: "include" });
     if (!res.ok) return null;
     const blob = await res.blob();
     const objUrl = URL.createObjectURL(blob);

@@ -46,7 +46,7 @@ export function AdminProfile() {
     try {
       const res = await fetch(`${BASE}/api/auth/admin/upload/profile-picture-data`, {
         method: "POST",
-        credentials: "same-origin",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dataUrl }),
       });
@@ -70,7 +70,7 @@ export function AdminProfile() {
     try {
       const res = await fetch(`${BASE}/api/auth/admin/profile`, {
         method: "PATCH",
-        credentials: "same-origin",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fullName: editName, phone: editPhone, email: editEmail }),
       });

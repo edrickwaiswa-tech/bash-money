@@ -24,7 +24,7 @@ export function ForceSetPin() {
       const res = await fetch(`${BASE}/api/auth/member/set-pin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify({ pin: newPin }),
       });
       const data = await res.json();

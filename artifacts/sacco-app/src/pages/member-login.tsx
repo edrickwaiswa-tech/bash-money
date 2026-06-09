@@ -39,7 +39,7 @@ export function MemberLogin() {
       const res = await fetch(`${BASE}/api/auth/member/request-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify({ phone: phone.trim() }),
       });
       const data = await res.json();
@@ -65,7 +65,7 @@ export function MemberLogin() {
       const res = await fetch(`${BASE}/api/auth/member/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify({ phone: phone.trim(), code }),
       });
       const data = await res.json();

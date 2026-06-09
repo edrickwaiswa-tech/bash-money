@@ -224,7 +224,7 @@ export function Login() {
     const poll = async () => {
       try {
         const res = await fetch(`${BASE}/api/auth/login-request/status?token=${requestToken}`, {
-          credentials: "same-origin",
+          credentials: "include",
         });
         if (!res.ok) return;
         const data = await res.json();
@@ -276,7 +276,7 @@ export function Login() {
       const res = await fetch(`${BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify({ email: adminEmail.trim(), password: adminPassword }),
       });
       const data = await res.json();
@@ -315,7 +315,7 @@ export function Login() {
       const res = await fetch(`${BASE}/api/auth/member/login-pin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify({ identifier: phone, pin: memberPin }),
       });
       const data = await res.json();

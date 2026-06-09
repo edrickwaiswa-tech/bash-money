@@ -64,7 +64,7 @@ export function SecuritySettings() {
       const res = await fetch(`${BASE}/api/auth/change-pin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify({ currentPin, newPin, confirmPin }),
       });
       const data = await res.json();

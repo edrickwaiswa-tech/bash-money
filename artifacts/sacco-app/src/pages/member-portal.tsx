@@ -59,7 +59,7 @@ export function MemberPortal() {
   const [cpSuccess, setCpSuccess]       = useState(false);
 
   useEffect(() => {
-    fetch(`${BASE}/api/auth/member/me`, { credentials: "same-origin" })
+    fetch(`${BASE}/api/auth/member/me`, { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.memberId) {
@@ -77,13 +77,13 @@ export function MemberPortal() {
   }, []);
 
   const fetchUnreadCount = useCallback(async () => {
-    const r = await fetch(`${BASE}/api/member/notifications/unread-count`, { credentials: "same-origin" });
+    const r = await fetch(`${BASE}/api/member/notifications/unread-count`, { credentials: "include" });
     if (r.ok) { const d = await r.json(); setUnreadCount(d.count ?? 0); }
   }, []);
 
   const fetchNotifications = useCallback(async () => {
     setNotifsLoading(true);
-    const r = await fetch(`${BASE}/api/member/notifications`, { credentials: "same-origin" });
+    const r = await fetch(`${BASE}/api/member/notifications`, { credentials: "include" });
     if (r.ok) {
       const data = await r.json();
       setNotifications(data);
@@ -93,7 +93,7 @@ export function MemberPortal() {
   }, []);
 
   const markAllRead = async () => {
-    await fetch(`${BASE}/api/member/notifications/read-all`, { method: "PATCH", credentials: "same-origin" });
+    await fetch(`${BASE}/api/member/notifications/read-all`, { method: "PATCH", credentials: "include" });
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnreadCount(0);
   };
@@ -120,7 +120,7 @@ export function MemberPortal() {
   const handleLogoutConfirmed = async () => {
     setLoggingOut(true);
     try {
-      await fetch(`${BASE}/api/auth/member/logout`, { method: "POST", credentials: "same-origin" });
+      await fetch(`${BASE}/api/auth/member/logout`, { method: "POST", credentials: "include" });
       navigate("/login");
     } finally {
       setLoggingOut(false);
@@ -150,7 +150,7 @@ export function MemberPortal() {
       const res = await fetch(`${BASE}/api/auth/member/change-pin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify({ currentPin: cpCurrent || undefined, newPin: cpNew, confirmPin: cpConfirm }),
       });
       const data = await res.json();

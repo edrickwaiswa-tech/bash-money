@@ -11,7 +11,7 @@ services:
     rootDir: .
     plan: free
     buildCommand: corepack pnpm install --frozen-lockfile && corepack pnpm --filter @workspace/api-server run build
-    startCommand: corepack pnpm --filter @workspace/api-server run start
+    startCommand: corepack pnpm --filter @workspace/db run push-force && corepack pnpm --filter @workspace/api-server run start
     envVars:
       - key: NODE_VERSION
         value: 22.19.0
