@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function AdminProfile() {
   const { user, refreshProfile } = useAuth();

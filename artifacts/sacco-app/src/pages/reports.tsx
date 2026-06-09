@@ -6,7 +6,7 @@ import { TrendingUp, TrendingDown, Activity, FileDown, RefreshCw, Calendar } fro
 import { Button } from "@/components/ui/button";
 import { exportReportPDF } from "@/lib/pdf-export";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || import.meta.env.BASE_URL.replace(/\/$/, "");
 
 type Period = "daily" | "weekly" | "monthly" | "custom";
 

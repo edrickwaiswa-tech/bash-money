@@ -1,0 +1,24 @@
+databases:
+  - name: bash-m-money-db
+    databaseName: bash_m_money
+    user: bash_m_money
+
+services:
+  - type: web
+    name: bash-m-money-api
+    runtime: node
+    rootDir: .
+    plan: starter
+    buildCommand: corepack enable && corepack pnpm install --frozen-lockfile && corepack pnpm --filter @workspace/api-server run build
+    startCommand: corepack pnpm --filter @workspace/api-server run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bash-m-money-db
+          property: connectionString

@@ -6,20 +6,8 @@ const ADMIN_ACCOUNTS = [
   {
     username: "kakembob1@gmail.com",
     email: "kakembob1@gmail.com",
-    fullName: "Kakembo",
-    password: "BashM2026!",
-  },
-  {
-    username: "admin",
-    email: "edrickwaiswa@gmail.com",
-    fullName: "Edrick Waiswa",
-    password: "Admin123!",
-  },
-  {
-    username: "admin@bmmfs.com",
-    email: "admin@bmmfs.com",
     fullName: "BMMFS Admin",
-    password: "Admin123!",
+    password: "admin@1",
   },
 ];
 

@@ -21,7 +21,7 @@ import {
   KeyRound, CheckCircle2, AlertCircle, ShieldCheck,
 } from "lucide-react";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || import.meta.env.BASE_URL.replace(/\/$/, "");
 
 interface Notification {
   id: number;

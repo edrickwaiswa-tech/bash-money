@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ShieldCheck, CheckCircle2, Lock, ArrowLeft, KeyRound, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function SecuritySettings() {
   const [, navigate] = useLocation();

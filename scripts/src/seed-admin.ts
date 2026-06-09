@@ -2,8 +2,8 @@ import bcrypt from "bcrypt";
 import { db, adminUsersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
-const DEFAULT_USERNAME = "admin";
-const DEFAULT_PASSWORD = "Sacco@2024!";
+const DEFAULT_USERNAME = "kakembob1@gmail.com";
+const DEFAULT_PASSWORD = "admin@1";
 
 async function seedAdmin() {
   const existing = await db
@@ -19,6 +19,8 @@ async function seedAdmin() {
   const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, 12);
   await db.insert(adminUsersTable).values({
     username: DEFAULT_USERNAME,
+    email: DEFAULT_USERNAME,
+    fullName: "BMMFS Admin",
     passwordHash,
   });
 

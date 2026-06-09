@@ -361,7 +361,7 @@ export async function customFetch<T = unknown>(
   const requestInfo = { method, url: resolveUrl(input) };
 
   const response = await fetch(input, {
-    credentials: "same-origin",
+    credentials: _baseUrl ? "include" : "same-origin",
     ...init,
     method,
     headers,

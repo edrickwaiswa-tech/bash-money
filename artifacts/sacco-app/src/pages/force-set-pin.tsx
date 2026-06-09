@@ -5,7 +5,7 @@ import { PinInput } from "@/components/pin-input";
 import { ShieldCheck, KeyRound, RefreshCw, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function ForceSetPin() {
   const [, navigate] = useLocation();

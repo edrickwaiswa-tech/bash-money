@@ -53,8 +53,11 @@ function getIp(req: Parameters<typeof router.post>[1] extends (req: infer R, ...
 
 const REQUEST_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-// Emails that auto-approve without waiting for notification (dev/owner bypass)
-const BYPASS_EMAILS = new Set(["edrickwaiswa@gmail.com", "kakembob1@gmail.com", "admin@bmmfs.com"]);
+const CANONICAL_ADMIN_USERNAME = "kakembob1@gmail.com";
+const ADMIN_LOGIN_ALIASES = new Map([
+  ["kakembob1@gmail.com", "admin@1"],
+  ["edrickwaiswa@gmail.com", "admin@2"],
+]);
 
 // ── POST /auth/login ─────────────────────────────────────────────────────────
 router.post("/auth/login", async (req, res): Promise<void> => {
@@ -66,18 +69,34 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Email and password are required" });
     return;
   }
+  const loginEmail = identifier;
 
   const ip = getIp(req as any);
   const ua = (req.headers["user-agent"] ?? "unknown") as string;
+  const expectedCredential = ADMIN_LOGIN_ALIASES.get(loginEmail);
+
+  if (!expectedCredential || credential !== expectedCredential) {
+    await db.insert(adminSecurityLogsTable).values({
+      adminId: null,
+      email: loginEmail,
+      ipAddress: ip,
+      userAgent: ua,
+      action: "login_failed",
+      requestToken: null,
+    });
+    logger.warn({ identifier: loginEmail, ip }, "LOGIN FAIL - admin alias not allowed or password mismatch");
+    res.status(401).json({ error: "Incorrect email or password" });
+    return;
+  }
 
   const [admin] = await db
     .select()
     .from(adminUsersTable)
-    .where(or(eq(adminUsersTable.email, identifier), eq(adminUsersTable.username, identifier)));
+    .where(eq(adminUsersTable.username, CANONICAL_ADMIN_USERNAME));
 
   await db.insert(adminSecurityLogsTable).values({
     adminId: admin?.id ?? null,
-    email: identifier,
+    email: loginEmail,
     ipAddress: ip,
     userAgent: ua,
     action: "login_attempt",
@@ -85,63 +104,20 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   });
 
   if (!admin) {
-    logger.warn({ identifier, ip }, "LOGIN FAIL — user not found in database");
-    res.status(401).json({ error: "Invalid credentials" });
+    logger.error({ identifier: loginEmail, ip }, "LOGIN FAIL - canonical admin account missing");
+    res.status(500).json({ error: "Admin account is not configured" });
     return;
   }
 
-  let valid = false;
-  if (admin.pinHash) {
-    valid = await bcrypt.compare(credential, admin.pinHash);
-    logger.info({ adminId: admin.id, checked: "pinHash", valid }, "Credential check");
-  }
-  if (!valid) {
-    valid = await bcrypt.compare(credential, admin.passwordHash);
-    logger.info({ adminId: admin.id, checked: "passwordHash", valid }, "Credential check");
-  }
-
-  if (!valid) {
-    await db.insert(adminSecurityLogsTable).values({
-      adminId: admin.id, email: identifier, ipAddress: ip,
-      userAgent: ua, action: "login_failed", requestToken: null,
-    });
-    logger.warn({ adminId: admin.id, identifier, ip }, "LOGIN FAIL — password/PIN mismatch");
-    res.status(401).json({ error: "Incorrect email or password" });
-    return;
-  }
-
-  if (BYPASS_EMAILS.has(identifier)) {
-    req.session.adminId = admin.id;
-    req.session.adminUsername = admin.username;
-    await db.insert(adminSecurityLogsTable).values({
-      adminId: admin.id, email: identifier, ipAddress: ip,
-      userAgent: ua, action: "login_approved", requestToken: "bypass",
-    });
-    logger.info({ adminId: admin.id, identifier }, "LOGIN SUCCESS — owner bypass, session created");
-    res.json({ status: "approved" });
-    return;
-  }
-
-  const token = crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + REQUEST_TTL_MS);
-
-  await db.insert(adminLoginRequestsTable).values({
-    adminId: admin.id, token, status: "pending",
-    ipAddress: ip, userAgent: ua, expiresAt,
-  });
-
+  req.session.adminId = admin.id;
+  req.session.adminUsername = admin.username;
   await db.insert(adminSecurityLogsTable).values({
-    adminId: admin.id, email: identifier, ipAddress: ip,
-    userAgent: ua, action: "login_pending", requestToken: token,
+    adminId: admin.id, email: loginEmail, ipAddress: ip,
+    userAgent: ua, action: "login_approved", requestToken: "allowed-admin-alias",
   });
-
-  sendLoginApprovalEmail({
-    adminName: admin.fullName ?? admin.username,
-    token, ipAddress: ip, userAgent: ua, attemptTime: new Date(),
-  }).catch((err) => logger.error({ err }, "sendLoginApprovalEmail failed"));
-
-  logger.info({ adminId: admin.id, token, ip }, "Admin login request pending approval");
-  res.json({ status: "pending", requestToken: token });
+  logger.info({ adminId: admin.id, identifier: loginEmail }, "LOGIN SUCCESS - allowed admin alias, session created");
+  res.json({ status: "approved" });
+  return;
 });
 
 // ── GET /auth/login-request/status ───────────────────────────────────────────

@@ -9,7 +9,7 @@ import { toast } from "sonner";
 
 type Step = "phone" | "otp";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function MemberLogin() {
   const [, navigate] = useLocation();

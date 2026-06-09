@@ -8,7 +8,7 @@ import {
   Clock, CheckCircle2, XCircle, Loader2,
 } from "lucide-react";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || import.meta.env.BASE_URL.replace(/\/$/, "");
 const POLL_INTERVAL = 4000;    // 4 seconds
 const REQUEST_TTL   = 10 * 60; // 10 minutes in seconds
 

@@ -6,7 +6,7 @@ import { PinInput } from "@/components/pin-input";
 import { BmmLogo } from "@/components/bmm-logo";
 import { ArrowLeft, Phone, KeyRound, CheckCircle, AlertCircle, Info } from "lucide-react";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || import.meta.env.BASE_URL.replace(/\/$/, "");
 
 type Step = "phone" | "code" | "new-pin" | "success";
 
