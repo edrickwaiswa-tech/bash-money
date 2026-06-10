@@ -28,8 +28,6 @@ export async function seedAdminAccounts(): Promise<void> {
           target: adminUsersTable.username,
           set: {
             email: account.email,
-            passwordHash,
-            pinHash: null,
           },
         });
 

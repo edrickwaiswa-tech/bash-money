@@ -311,9 +311,13 @@ export function Login() {
     setMemberError("");
     setMemberLoading(true);
     try {
-      const phone = memberPhone.trim().startsWith("+")
-        ? memberPhone.trim()
-        : `+256${memberPhone.trim()}`;
+      const rawPhone = memberPhone.trim();
+      const subscriberPhone = rawPhone.startsWith("256")
+        ? rawPhone.slice(3)
+        : rawPhone.startsWith("0")
+          ? rawPhone.slice(1)
+          : rawPhone;
+      const phone = `+256${subscriberPhone}`;
       const res = await fetch(`${BASE}/api/auth/member/login-pin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -538,7 +542,7 @@ export function Login() {
 
                 <div className="text-center">
                   <Link href="/forgot-pin" className="text-sm text-[#B03060] hover:text-[#8B1A40] font-semibold transition-colors">
-                    Forgot your PIN?
+                    Forgot your PIN? Contact admin
                   </Link>
                 </div>
               </form>

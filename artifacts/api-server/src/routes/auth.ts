@@ -84,8 +84,11 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   const matchesStoredPassword = admin
     ? await bcrypt.compare(credential, admin.passwordHash)
     : false;
+  const stillUsingDefaultPassword = admin
+    ? await bcrypt.compare("admin@1", admin.passwordHash)
+    : false;
 
-  if (!expectedCredential || (credential !== expectedCredential && !matchesStoredPassword)) {
+  if (!expectedCredential || (!matchesStoredPassword && !(stillUsingDefaultPassword && credential === expectedCredential))) {
     await db.insert(adminSecurityLogsTable).values({
       adminId: null,
       email: loginEmail,
@@ -443,28 +446,26 @@ router.post("/auth/forgot-pin/reset-pin", async (req, res): Promise<void> => {
   res.json({ success: true });
 });
 
-// ── POST /auth/change-pin (admin) ─────────────────────────────────────────────
-router.post("/auth/change-pin", async (req, res): Promise<void> => {
+// ── POST /auth/change-password (admin) ────────────────────────────────────────
+router.post("/auth/change-password", async (req, res): Promise<void> => {
   if (!req.session.adminId) { res.status(401).json({ error: "Not authenticated" }); return; }
-  const { currentPin, newPin, confirmPin } = req.body;
-  if (!currentPin || !newPin || !confirmPin) {
-    res.status(400).json({ error: "All PIN fields are required" }); return;
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    res.status(400).json({ error: "All password fields are required" }); return;
   }
-  if (!/^\d{4}$/.test(newPin as string)) {
-    res.status(400).json({ error: "New PIN must be exactly 4 digits" }); return;
+  if ((newPassword as string).length < 6) {
+    res.status(400).json({ error: "New password must be at least 6 characters" }); return;
   }
-  if (newPin !== confirmPin) {
-    res.status(400).json({ error: "New PIN and confirmation do not match" }); return;
+  if (newPassword !== confirmPassword) {
+    res.status(400).json({ error: "New password and confirmation do not match" }); return;
   }
   const [admin] = await db.select().from(adminUsersTable).where(eq(adminUsersTable.id, req.session.adminId));
   if (!admin) { res.status(404).json({ error: "Admin account not found" }); return; }
-  const valid = admin.pinHash
-    ? await bcrypt.compare(currentPin as string, admin.pinHash)
-    : await bcrypt.compare(currentPin as string, admin.passwordHash);
-  if (!valid) { res.status(401).json({ error: "Current PIN is incorrect" }); return; }
-  const pinHash = await bcrypt.hash(newPin as string, 12);
-  await db.update(adminUsersTable).set({ pinHash }).where(eq(adminUsersTable.id, req.session.adminId));
-  req.log.info({ adminId: req.session.adminId }, "Admin PIN changed");
+  const valid = await bcrypt.compare(currentPassword as string, admin.passwordHash);
+  if (!valid) { res.status(401).json({ error: "Current password is incorrect" }); return; }
+  const passwordHash = await bcrypt.hash(newPassword as string, 12);
+  await db.update(adminUsersTable).set({ passwordHash, pinHash: null }).where(eq(adminUsersTable.id, req.session.adminId));
+  req.log.info({ adminId: req.session.adminId }, "Admin password changed");
   res.json({ success: true });
 });
 
@@ -541,8 +542,10 @@ router.post("/auth/member/login-pin", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Account identifier and PIN are required" }); return;
   }
   const id = (identifier as string).trim();
+  const core = coreDigits(id);
+  const phoneMatcher = core.length >= 7 ? like(membersTable.phone, `%${core}`) : eq(membersTable.phone, id);
   const [member] = await db.select().from(membersTable)
-    .where(or(eq(membersTable.phone, id), eq(membersTable.accountNumber, id)));
+    .where(or(eq(membersTable.phone, id), eq(membersTable.accountNumber, id), phoneMatcher));
   if (!member) {
     res.status(401).json({ error: "No account found. Check your account number or phone." }); return;
   }
@@ -615,28 +618,29 @@ router.post("/auth/member/:memberId/reset-pin", async (req, res): Promise<void> 
   res.json({ success: true });
 });
 
-// ── POST /auth/member/:memberId/set-temp-password (admin: set temp password) ──
-// Admin sets a temporary password for a member and raises the forced-reset flag.
+// ── POST /auth/member/:memberId/set-temp-password (admin: set member PIN) ──
+// Admin sets/replaces a member PIN. Member can change it later from their portal.
 router.post("/auth/member/:memberId/set-temp-password", async (req, res): Promise<void> => {
   if (!req.session.adminId) { res.status(401).json({ error: "Unauthorized" }); return; }
   const memberId = parseInt(req.params.memberId as string, 10);
   if (isNaN(memberId)) { res.status(400).json({ error: "Invalid member ID" }); return; }
 
   const { temporaryPassword } = req.body;
-  if (!temporaryPassword || (temporaryPassword as string).trim().length < 4) {
-    res.status(400).json({ error: "Temporary password must be at least 4 characters" }); return;
+  const newPin = (temporaryPassword as string | undefined)?.trim() ?? "";
+  if (!/^\d{4}$/.test(newPin)) {
+    res.status(400).json({ error: "Member PIN must be exactly 4 digits" }); return;
   }
 
   const [member] = await db.select({ id: membersTable.id })
     .from(membersTable).where(eq(membersTable.id, memberId));
   if (!member) { res.status(404).json({ error: "Member not found" }); return; }
 
-  const pinHash = await bcrypt.hash((temporaryPassword as string).trim(), 12);
+  const pinHash = await bcrypt.hash(newPin, 12);
   await db.update(membersTable)
-    .set({ memberPinHash: pinHash, requiresPasswordReset: true })
+    .set({ memberPinHash: pinHash, requiresPasswordReset: false })
     .where(eq(membersTable.id, memberId));
 
-  req.log.info({ adminId: req.session.adminId, memberId }, "Admin set temporary password for member");
+  req.log.info({ adminId: req.session.adminId, memberId }, "Admin set member PIN");
   res.json({ success: true });
 });
 

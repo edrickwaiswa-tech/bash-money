@@ -231,7 +231,7 @@ export function AdminProfile() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-[#0f2557] text-sm">Security Settings</p>
-                <p className="text-[11px] text-gray-400 mt-0.5">Change your admin login PIN</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">Change your admin password</p>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
             </div>

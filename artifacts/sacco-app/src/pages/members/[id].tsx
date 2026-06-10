@@ -64,7 +64,6 @@ export function MemberDetail() {
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isResettingPin, setIsResettingPin] = useState(false);
   const [showTempPwModal, setShowTempPwModal] = useState(false);
   const [tempPassword, setTempPassword] = useState("");
   const [isSettingTempPw, setIsSettingTempPw] = useState(false);
@@ -110,27 +109,9 @@ export function MemberDetail() {
 
   const handleDelete = () => deleteMember.mutate({ memberId });
 
-  const handleResetPin = async () => {
-    if (!confirm("Reset this member's PIN? They will need to set a new PIN via OTP login.")) return;
-    setIsResettingPin(true);
-    try {
-      const res = await fetch(`${BASE}/api/auth/member/${memberId}/reset-pin`, {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      toast.success("Member PIN has been reset. They can now set a new PIN via OTP login.");
-    } catch (err: any) {
-      toast.error(err.message ?? "Failed to reset PIN");
-    } finally {
-      setIsResettingPin(false);
-    }
-  };
-
   const handleSetTempPassword = async () => {
-    if (!tempPassword.trim() || tempPassword.trim().length < 4) {
-      toast.error("Temporary password must be at least 4 characters");
+    if (!/^\d{4}$/.test(tempPassword.trim())) {
+      toast.error("Member PIN must be exactly 4 digits");
       return;
     }
     setIsSettingTempPw(true);
@@ -143,11 +124,11 @@ export function MemberDetail() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast.success("Temporary password set. Member will be prompted to create a new PIN on their next login.");
+      toast.success("Member PIN updated. They can now log in with the new PIN.");
       setShowTempPwModal(false);
       setTempPassword("");
     } catch (err: any) {
-      toast.error(err.message ?? "Failed to set temporary password");
+      toast.error(err.message ?? "Failed to set member PIN");
     } finally {
       setIsSettingTempPw(false);
     }
@@ -601,47 +582,20 @@ export function MemberDetail() {
               </Button>
             </div>
 
-            {/* Reset Member PIN */}
-            <div className="bg-white rounded-2xl shadow-sm border border-amber-100 overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-50 flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-[#1A1A1A] text-sm">Member PIN</h3>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">Clear the member's PIN so they re-set it via OTP</p>
-                </div>
-              </div>
-              <div className="px-5 py-4 space-y-3">
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  If a member has forgotten their PIN, you can clear it here. They will then need to sign in via OTP to set a new PIN.
-                </p>
-                <Button
-                  variant="outline"
-                  className="w-full gap-2 h-10 rounded-xl border-amber-200 text-amber-700 hover:bg-amber-50 transition-all text-sm font-semibold"
-                  onClick={handleResetPin}
-                  disabled={isResettingPin}
-                >
-                  <Lock className="h-3.5 w-3.5" />
-                  {isResettingPin ? "Clearing…" : "Clear Member PIN"}
-                </Button>
-              </div>
-            </div>
-
-            {/* Admin Override — Set Temporary Password */}
+            {/* Admin Override — Set Member PIN */}
             <div className="bg-white rounded-2xl shadow-sm border border-[#B03060]/20 overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-50 flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-[#B03060]/8 flex items-center justify-center flex-shrink-0">
                   <KeyRound className="w-3.5 h-3.5 text-[#B03060]" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-[#1A1A1A] text-sm">Reset Member Password</h3>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">Set a temporary password — member must change it on next login</p>
+                  <h3 className="font-bold text-[#1A1A1A] text-sm">Reset Member PIN</h3>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Set a new 4-digit PIN for this member</p>
                 </div>
               </div>
               <div className="px-5 py-4 space-y-3">
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Use this when a member cannot access their account. Set a temporary password they can use to log in, then they will be immediately prompted to create a new private PIN before seeing their dashboard.
+                  Use this when a member cannot access their account. The member can log in immediately with the new PIN and change it later from their portal.
                 </p>
                 <button
                   className="w-full gap-2 h-10 rounded-xl border text-sm font-semibold transition-all flex items-center justify-center text-white disabled:opacity-50"
@@ -649,7 +603,7 @@ export function MemberDetail() {
                   onClick={() => setShowTempPwModal(true)}
                 >
                   <KeyRound className="h-3.5 w-3.5" />
-                  Reset Member Password
+                  Set New Member PIN
                 </button>
               </div>
             </div>
@@ -781,7 +735,7 @@ export function MemberDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Temp Password Modal */}
+      {/* Set Member PIN Modal */}
       <Dialog open={showTempPwModal} onOpenChange={(open) => { if (!isSettingTempPw) { setShowTempPwModal(open); if (!open) setTempPassword(""); } }}>
         <DialogContent
           className="rounded-3xl border-0 p-0 overflow-hidden max-w-[340px] mx-auto"
@@ -793,34 +747,36 @@ export function MemberDetail() {
                 <KeyRound className="w-5 h-5 text-[#B03060]" />
               </div>
               <div>
-                <DialogTitle className="text-[#1A1A1A] font-black text-base leading-tight">Reset Member Password</DialogTitle>
+                <DialogTitle className="text-[#1A1A1A] font-black text-base leading-tight">Set Member PIN</DialogTitle>
                 <p className="text-[11px] text-muted-foreground mt-0.5">{profile.name}</p>
               </div>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed mb-5">
-              Enter a temporary password for this member. They will be required to create a new private PIN the next time they sign in — they cannot access their dashboard until they do.
+              Enter a new 4-digit PIN for this member. Share it privately with them; they can change it later after logging in.
             </p>
             <div className="space-y-1.5">
               <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Temporary Password
+                New 4-Digit PIN
               </Label>
               <Input
-                type="text"
-                placeholder="e.g. Welcome2026!"
+                type="password"
+                placeholder="4 digits"
                 value={tempPassword}
-                onChange={(e) => setTempPassword(e.target.value)}
+                inputMode="numeric"
+                maxLength={4}
+                onChange={(e) => setTempPassword(e.target.value.replace(/\D/g, "").slice(0, 4))}
                 disabled={isSettingTempPw}
                 autoFocus
                 className="rounded-xl border-[#B03060]/20 focus-visible:ring-[#B03060] h-11 font-mono tracking-wider"
                 onKeyDown={(e) => { if (e.key === "Enter") handleSetTempPassword(); }}
               />
-              <p className="text-[10px] text-muted-foreground mt-1">Min 4 characters — share this privately with the member</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Exactly 4 digits — share this privately with the member</p>
             </div>
           </div>
           <DialogFooter className="flex-col gap-2 px-6 pb-6 pt-4">
             <button
               onClick={handleSetTempPassword}
-              disabled={isSettingTempPw || tempPassword.trim().length < 4}
+              disabled={isSettingTempPw || tempPassword.trim().length !== 4}
               className="w-full h-11 rounded-2xl text-white font-bold text-sm transition-all disabled:opacity-50"
               style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
             >
@@ -829,7 +785,7 @@ export function MemberDetail() {
                   <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                   Saving…
                 </span>
-              ) : "Set Temporary Password"}
+              ) : "Set Member PIN"}
             </button>
             <Button
               variant="outline"
