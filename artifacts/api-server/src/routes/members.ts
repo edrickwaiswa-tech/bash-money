@@ -1,4 +1,5 @@
 import { Router } from "express";
+import bcrypt from "bcrypt";
 import { db } from "@workspace/db";
 import { membersTable, transactionsTable, CREDIT_TYPES } from "@workspace/db";
 import { eq, like, or, asc } from "drizzle-orm";
@@ -87,6 +88,7 @@ router.get("/members", requireAdmin, async (req, res) => {
 router.post("/members", requireAdmin, async (req, res) => {
   try {
     const body = CreateMemberBody.parse(req.body);
+    const { initialPin, ...memberBody } = body;
     const joinDate = body.joinDate ?? new Date().toISOString().split("T")[0];
 
     // Auto-generate account number: BMMFS-YYYY-NNNNN
@@ -97,7 +99,13 @@ router.post("/members", requireAdmin, async (req, res) => {
 
     const [member] = await db
       .insert(membersTable)
-      .values({ ...body, joinDate, accountNumber })
+      .values({
+        ...memberBody,
+        joinDate,
+        accountNumber,
+        memberPinHash: initialPin ? await bcrypt.hash(initialPin, 12) : null,
+        requiresPasswordReset: false,
+      })
       .returning();
     res.status(201).json({ ...member, createdAt: member.createdAt.toISOString() });
   } catch (err) {

@@ -33,7 +33,7 @@ const TX_TYPES: {
   { value: "SAVINGS_DEPOSIT",   label: "Savings Deposit",   sub: "Credit to savings",  icon: ArrowDownToLine,  color: "text-emerald-600", bg: "bg-emerald-50" },
   { value: "WITHDRAWAL",        label: "Savings Withdrawal", sub: "Debit from savings", icon: ArrowUpFromLine,  color: "text-red-500",     bg: "bg-red-50"     },
   { value: "LOAN_DISBURSEMENT", label: "Loan Disbursement",  sub: "Issue a new loan",   icon: Landmark,         color: "text-orange-500",  bg: "bg-orange-50"  },
-  { value: "LOAN_REPAYMENT",    label: "Loan Repayment",     sub: "Repay a loan",       icon: ArrowUpCircle,    color: "text-blue-500",    bg: "bg-blue-50"    },
+  { value: "LOAN_REPAYMENT",    label: "Loan Repayment",     sub: "Repay a loan",       icon: ArrowUpCircle,    color: "text-[#B03060]",    bg: "bg-[#B03060]/5"    },
 ];
 
 // ── Field label ───────────────────────────────────────────────────────────────

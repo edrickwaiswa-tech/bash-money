@@ -11,6 +11,7 @@ import {
   CheckCircle2, RefreshCw, KeyRound, ChevronRight, Lock,
 } from "lucide-react";
 import { Link } from "wouter";
+import { mediaUrl } from "@/lib/media-url";
 
 const BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -30,6 +31,7 @@ export function AdminProfile() {
   const picInputRef = useRef<HTMLInputElement>(null);
 
   const displayName = user?.fullName ?? user?.username ?? "Admin";
+  const profilePhotoUrl = mediaUrl(user?.profilePictureUrl);
   const initials    = displayName.trim().split(/\s+/).map((n) => n[0]?.toUpperCase() ?? "").slice(0, 2).join("");
 
   const handlePicFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,9 +116,9 @@ export function AdminProfile() {
                 title="Change profile photo"
               >
                 <div className="w-24 h-24 rounded-full overflow-hidden border-[3px] border-[#B03060]/30 bg-white flex items-center justify-center shadow-lg mx-auto">
-                  {user.profilePictureUrl && !imgErr ? (
+                  {profilePhotoUrl && !imgErr ? (
                     <img
-                      src={user.profilePictureUrl}
+                      src={profilePhotoUrl}
                       alt={displayName}
                       className="w-full h-full object-cover"
                       onError={() => setImgErr(true)}

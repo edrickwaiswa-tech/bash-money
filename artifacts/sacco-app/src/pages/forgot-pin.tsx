@@ -59,6 +59,9 @@ export function ForgotPin() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Failed to send code"); return; }
+      if (data.devFallback && data.notificationCode) {
+        window.alert(`BMMFS Security\n\nTest recovery code: ${data.notificationCode}\n\nEnter this code on the next screen.`);
+      }
       setStep("code");
     } finally {
       setIsLoading(false);
@@ -200,8 +203,8 @@ export function ForgotPin() {
                 </p>
               </div>
               <div className="px-6 py-6 space-y-4">
-                <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 text-blue-800 rounded-2xl px-3 py-3 text-sm">
-                  <Info className="w-4 h-4 mt-0.5 shrink-0" />
+                <div className="flex items-start gap-2 bg-[#B03060]/5 border border-[#B03060]/10 text-[#7B1535] rounded-2xl px-3 py-3 text-sm">
+                  <Info className="w-4 h-4 mt-0.5 shrink-0 text-[#B03060]" />
                   <p className="text-xs leading-relaxed">Check your SMS messages for a 6-digit code from BMMFS. Enter it below to continue.</p>
                 </div>
 

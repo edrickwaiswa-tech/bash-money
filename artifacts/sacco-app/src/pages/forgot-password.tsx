@@ -202,9 +202,9 @@ export function ForgotPassword() {
               </p>
             </div>
 
-            <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-3">
-              <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-              <p className="text-xs text-blue-700 leading-relaxed">
+            <div className="flex items-start gap-2 bg-[#B03060]/5 border border-[#B03060]/10 rounded-xl px-3 py-3">
+              <Info className="w-4 h-4 text-[#B03060] mt-0.5 shrink-0" />
+              <p className="text-xs text-[#7B1535] leading-relaxed">
                 The code was sent to your email inbox. If you do not see it, check your spam folder.
                 The code expires in 10 minutes.
               </p>

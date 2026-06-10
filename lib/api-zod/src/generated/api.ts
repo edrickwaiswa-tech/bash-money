@@ -46,6 +46,7 @@ export const CreateMemberBody = zod.object({
   name: zod.string(),
   phone: zod.string(),
   idNumber: zod.string(),
+  initialPin: zod.string().optional(),
   joinDate: zod.string().optional(),
 });
 

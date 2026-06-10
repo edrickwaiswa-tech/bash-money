@@ -148,9 +148,9 @@ function PendingPanel({
       </div>
 
       {/* Info box */}
-      <div className="w-full bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 text-left">
-        <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wider mb-1">What happens next?</p>
-        <ul className="text-[12px] text-blue-600 space-y-1 leading-relaxed">
+      <div className="w-full bg-[#B03060]/5 border border-[#B03060]/10 rounded-2xl px-4 py-3 text-left">
+        <p className="text-[11px] font-bold text-[#7B1535] uppercase tracking-wider mb-1">What happens next?</p>
+        <ul className="text-[12px] text-[#7B1535] space-y-1 leading-relaxed">
           <li>✉️ An approval email has been sent to the system administrators</li>
           <li>🔐 Either admin must click <strong>Approve</strong> in the email</li>
           <li>⚡ This page will redirect you automatically once approved</li>

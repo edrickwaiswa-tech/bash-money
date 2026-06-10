@@ -51,6 +51,7 @@ export interface CreateMemberBody {
   name: string;
   phone: string;
   idNumber: string;
+  initialPin?: string;
   joinDate?: string;
 }
 

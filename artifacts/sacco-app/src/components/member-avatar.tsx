@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { mediaUrl } from "@/lib/media-url";
 
 interface MemberAvatarProps {
   name: string;
@@ -26,11 +27,12 @@ export function MemberAvatar({ name, photoUrl, size = "md", className = "", onCl
     .join("");
 
   const { container, text, border } = SIZES[size];
-  const hasPhoto = !!photoUrl && !imgError;
+  const resolvedPhotoUrl = mediaUrl(photoUrl);
+  const hasPhoto = !!resolvedPhotoUrl && !imgError;
 
   const inner = hasPhoto ? (
     <img
-      src={photoUrl!}
+      src={resolvedPhotoUrl!}
       alt={name}
       className="w-full h-full object-cover"
       onError={() => setImgError(true)}

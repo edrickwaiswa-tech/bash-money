@@ -154,8 +154,8 @@ export function MemberLogin() {
                 </p>
               </div>
               <div className="px-6 py-6 space-y-4">
-                <div className="bg-blue-50 border border-blue-100 rounded-2xl p-3 text-center">
-                  <p className="text-xs text-blue-700 leading-relaxed">
+                <div className="bg-[#B03060]/5 border border-[#B03060]/10 rounded-2xl p-3 text-center">
+                  <p className="text-xs text-[#7B1535] leading-relaxed">
                     A verification code has been sent to your phone via SMS. Enter it below.
                   </p>
                 </div>

@@ -24,6 +24,7 @@ import {
   Copy, Check, Hash, ImageIcon, Pen, Upload, X,
   ShieldCheck, Lock, KeyRound
 } from "lucide-react";
+import { mediaUrl } from "@/lib/media-url";
 
 const BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -115,7 +116,7 @@ export function MemberDetail() {
     try {
       const res = await fetch(`${BASE}/api/auth/member/${memberId}/reset-pin`, {
         method: "POST",
-        credentials: "same-origin",
+        credentials: "include",
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -137,7 +138,7 @@ export function MemberDetail() {
       const res = await fetch(`${BASE}/api/auth/member/${memberId}/set-temp-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify({ temporaryPassword: tempPassword.trim() }),
       });
       const data = await res.json();
@@ -176,7 +177,7 @@ export function MemberDetail() {
     try {
       const res = await fetch(`${BASE}/api/members/${memberId}/upload/profile-picture-data`, {
         method: "POST",
-        credentials: "same-origin",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dataUrl }),
       });
@@ -203,7 +204,7 @@ export function MemberDetail() {
       form.append("file", file);
       const res = await fetch(`${BASE}/api/members/${memberId}/upload/signature`, {
         method: "POST",
-        credentials: "same-origin",
+        credentials: "include",
         body: form,
       });
       const data = await res.json();
@@ -224,7 +225,7 @@ export function MemberDetail() {
     try {
       const res = await fetch(`${BASE}/api/members/${memberId}/upload/signature-data`, {
         method: "POST",
-        credentials: "same-origin",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dataUrl }),
       });
@@ -250,8 +251,8 @@ export function MemberDetail() {
   }
   if (!profile) return <div className="p-4">Member not found.</div>;
 
-  const effectivePic = picPreview ?? (profile as any).profilePictureUrl ?? null;
-  const effectiveSig = sigPreview ?? (profile as any).signatureUrl ?? null;
+  const effectivePic = mediaUrl(picPreview ?? (profile as any).profilePictureUrl ?? null);
+  const effectiveSig = mediaUrl(sigPreview ?? (profile as any).signatureUrl ?? null);
   const initials = profile.name.trim().split(/\s+/).map((n) => n[0]?.toUpperCase() ?? "").slice(0, 2).join("");
 
   return (

@@ -32,7 +32,7 @@ export function MembersList() {
         toast.success("Member created successfully");
         queryClient.invalidateQueries({ queryKey: getListMembersQueryKey() });
         setIsAddOpen(false);
-        setNewMember({ name: "", phone: "", idNumber: "" });
+        setNewMember({ firstName: "", secondName: "", otherName: "", phone: "", idNumber: "", initialPin: "" });
       },
       onError: (err: any) => {
         toast.error(err.error || "Failed to create member");
@@ -40,11 +40,29 @@ export function MembersList() {
     }
   });
 
-  const [newMember, setNewMember] = useState({ name: "", phone: "", idNumber: "" });
+  const [newMember, setNewMember] = useState({
+    firstName: "",
+    secondName: "",
+    otherName: "",
+    phone: "",
+    idNumber: "",
+    initialPin: "",
+  });
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    createMember.mutate({ data: newMember });
+    const name = [newMember.firstName, newMember.secondName, newMember.otherName]
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join(" ");
+    createMember.mutate({
+      data: {
+        name,
+        phone: newMember.phone.trim(),
+        idNumber: newMember.idNumber.trim(),
+        initialPin: newMember.initialPin,
+      },
+    });
   };
 
   const nextSeq = String((allMembers?.length ?? 0) + 1).padStart(5, "0");
@@ -176,10 +194,13 @@ export function MembersList() {
             </div>
 
             {[
-              { id: "name",     label: "Full Name",          key: "name"     as const, placeholder: "e.g. John Doe",             type: "text" },
-              { id: "phone",    label: "Phone Number",        key: "phone"    as const, placeholder: "+256 700 000000",            type: "tel"  },
-              { id: "idNumber", label: "National ID Number",  key: "idNumber" as const, placeholder: "e.g. CM90100012BVAW",       type: "text" },
-            ].map(({ id, label, key, placeholder, type }) => (
+              { id: "firstName",  label: "First Name",         key: "firstName"  as const, placeholder: "e.g. John",               type: "text" },
+              { id: "secondName", label: "Second Name",        key: "secondName" as const, placeholder: "e.g. Waiswa",             type: "text" },
+              { id: "otherName",  label: "Other Name",         key: "otherName"  as const, placeholder: "Optional",                type: "text", optional: true },
+              { id: "phone",      label: "Phone Number",       key: "phone"      as const, placeholder: "+256 700 000000",         type: "tel"  },
+              { id: "idNumber",   label: "National ID Number", key: "idNumber"   as const, placeholder: "e.g. CM90100012BVAW",    type: "text" },
+              { id: "initialPin", label: "Initial Login PIN",  key: "initialPin" as const, placeholder: "4 digits",               type: "password" },
+            ].map(({ id, label, key, placeholder, type, optional }) => (
               <div key={id} className="space-y-1.5">
                 <Label htmlFor={id} className="text-xs font-bold uppercase tracking-wider text-gray-400">{label}</Label>
                 <Input
@@ -187,8 +208,13 @@ export function MembersList() {
                   type={type}
                   placeholder={placeholder}
                   value={newMember[key]}
-                  onChange={e => setNewMember({ ...newMember, [key]: e.target.value })}
-                  required
+                  maxLength={key === "initialPin" ? 4 : undefined}
+                  inputMode={key === "initialPin" ? "numeric" : undefined}
+                  onChange={e => setNewMember({
+                    ...newMember,
+                    [key]: key === "initialPin" ? e.target.value.replace(/\D/g, "").slice(0, 4) : e.target.value,
+                  })}
+                  required={!optional}
                   className="rounded-xl border-gray-200 focus-visible:ring-[#B03060]/40 focus-visible:border-[#B03060] h-11"
                 />
               </div>
@@ -200,7 +226,7 @@ export function MembersList() {
               </Button>
               <Button
                 type="submit"
-                disabled={createMember.isPending}
+                disabled={createMember.isPending || newMember.initialPin.length !== 4}
                 className="rounded-xl flex-1 text-white font-bold"
                 style={{ background: "linear-gradient(135deg, #B03060 0%, #7B1535 100%)" }}
               >
