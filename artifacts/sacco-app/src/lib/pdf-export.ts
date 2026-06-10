@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatTransactionType } from "./format";
+import { savePdf } from "./pdf-download";
 
 interface LedgerEntry {
   id: number;
@@ -485,7 +486,7 @@ export async function exportMemberStatementPDF(
 
   const safeName = profile.name.replace(/\s+/g, "_").toLowerCase();
   const date = new Date().toISOString().split("T")[0];
-  doc.save(`BashM_Statement_${safeName}_${date}.pdf`);
+  await savePdf(doc, `BashM_Statement_${safeName}_${date}.pdf`);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -786,5 +787,5 @@ export async function exportReportPDF(
   }
 
   const date = new Date().toISOString().split("T")[0];
-  doc.save(`BashM_Report_${date}.pdf`);
+  await savePdf(doc, `BashM_Report_${date}.pdf`);
 }
