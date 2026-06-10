@@ -4,7 +4,9 @@ import { MemberAvatar } from "@/components/member-avatar";
 import {
   useGetMember, getGetMemberQueryKey,
   useGetMemberLedger, getGetMemberLedgerQueryKey,
-  useUpdateMember, useDeleteMember
+  useUpdateMember, useDeleteMember,
+  CreateTransactionBodyType,
+  type LedgerEntry,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatCurrency, formatDate, formatTransactionType } from "@/lib/format";
@@ -27,6 +29,13 @@ import {
 import { mediaUrl } from "@/lib/media-url";
 
 const BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || import.meta.env.BASE_URL.replace(/\/$/, "");
+
+const transactionTypeOptions: Array<{ value: CreateTransactionBodyType; label: string }> = [
+  { value: CreateTransactionBodyType.SAVINGS_DEPOSIT, label: "Savings Deposit" },
+  { value: CreateTransactionBodyType.WITHDRAWAL, label: "Withdrawal" },
+  { value: CreateTransactionBodyType.LOAN_DISBURSEMENT, label: "Loan Disbursement" },
+  { value: CreateTransactionBodyType.LOAN_REPAYMENT, label: "Loan Repayment" },
+];
 
 export function MemberDetail() {
   const { id } = useParams();
@@ -71,6 +80,19 @@ export function MemberDetail() {
   const [isExporting, setIsExporting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [heroImgError, setHeroImgError] = useState(false);
+  const [editingTx, setEditingTx] = useState<LedgerEntry | null>(null);
+  const [deletingTx, setDeletingTx] = useState<LedgerEntry | null>(null);
+  const [txForm, setTxForm] = useState<{
+    type: CreateTransactionBodyType;
+    amount: string;
+    notes: string;
+  }>({
+    type: CreateTransactionBodyType.SAVINGS_DEPOSIT,
+    amount: "",
+    notes: "",
+  });
+  const [isSavingTx, setIsSavingTx] = useState(false);
+  const [isDeletingTx, setIsDeletingTx] = useState(false);
 
   // Crop modal
   const [cropSrc, setCropSrc] = useState<string | null>(null);
@@ -131,6 +153,73 @@ export function MemberDetail() {
       toast.error(err.message ?? "Failed to set member PIN");
     } finally {
       setIsSettingTempPw(false);
+    }
+  };
+
+  const refreshMemberData = () => {
+    queryClient.invalidateQueries({ queryKey: getGetMemberQueryKey(memberId) });
+    queryClient.invalidateQueries({ queryKey: getGetMemberLedgerQueryKey(memberId) });
+  };
+
+  const openEditTransaction = (entry: LedgerEntry) => {
+    setEditingTx(entry);
+    setTxForm({
+      type: entry.type as CreateTransactionBodyType,
+      amount: String(entry.amount),
+      notes: entry.notes ?? "",
+    });
+  };
+
+  const handleUpdateTransaction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTx) return;
+    const amount = Number(txForm.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error("Enter a valid positive amount");
+      return;
+    }
+
+    setIsSavingTx(true);
+    try {
+      const res = await fetch(`${BASE}/api/transactions/${editingTx.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          type: txForm.type,
+          amount,
+          notes: txForm.notes.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Update failed");
+      toast.success("Transaction updated");
+      setEditingTx(null);
+      refreshMemberData();
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to update transaction");
+    } finally {
+      setIsSavingTx(false);
+    }
+  };
+
+  const handleDeleteTransaction = async () => {
+    if (!deletingTx) return;
+    setIsDeletingTx(true);
+    try {
+      const res = await fetch(`${BASE}/api/transactions/${deletingTx.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Delete failed");
+      toast.success("Transaction deleted");
+      setDeletingTx(null);
+      refreshMemberData();
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to delete transaction");
+    } finally {
+      setIsDeletingTx(false);
     }
   };
 
@@ -357,9 +446,32 @@ export function MemberDetail() {
                   {ledger?.entries.map(entry => (
                     <div key={entry.id} className="px-4 py-3.5">
                       <div className="flex justify-between items-start mb-1">
-                        <div className="font-semibold text-[#1A1A1A] text-sm">{formatTransactionType(entry.type)}</div>
-                        <div className={`font-bold text-sm ${entry.direction === "credit" ? "text-emerald-600" : "text-destructive"}`}>
-                          {entry.direction === "credit" ? "+" : "-"}{formatCurrency(entry.amount)}
+                        <div className="min-w-0 pr-3">
+                          <div className="font-semibold text-[#1A1A1A] text-sm">{formatTransactionType(entry.type)}</div>
+                          <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{entry.transactionRef}</div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <div className={`font-bold text-sm text-right ${entry.direction === "credit" ? "text-emerald-600" : "text-destructive"}`}>
+                            {entry.direction === "credit" ? "+" : "-"}{formatCurrency(entry.amount)}
+                          </div>
+                          <div className="flex gap-1">
+                            <button
+                              type="button"
+                              onClick={() => openEditTransaction(entry)}
+                              className="w-7 h-7 rounded-lg border border-gray-200 text-gray-500 hover:text-[#B03060] hover:border-[#B03060]/30 flex items-center justify-center"
+                              title="Edit transaction"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeletingTx(entry)}
+                              className="w-7 h-7 rounded-lg border border-red-100 text-red-400 hover:text-red-600 hover:border-red-200 flex items-center justify-center"
+                              title="Delete transaction"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                       <div className="flex justify-between items-center text-[11px] text-muted-foreground">
@@ -730,6 +842,84 @@ export function MemberDetail() {
             <Button variant="outline" onClick={() => setIsDeleteOpen(false)} className="rounded-xl">Cancel</Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleteMember.isPending} className="rounded-xl">
               {deleteMember.isPending ? "Deleting…" : "Delete Member"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Transaction Modal */}
+      <Dialog open={!!editingTx} onOpenChange={(open) => { if (!open && !isSavingTx) setEditingTx(null); }}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-[#1A1A1A]">Edit Transaction</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdateTransaction} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</Label>
+              <select
+                value={txForm.type}
+                onChange={(e) => setTxForm({ ...txForm, type: e.target.value as CreateTransactionBodyType })}
+                disabled={isSavingTx}
+                className="w-full h-11 rounded-xl border border-[#B03060]/20 bg-white px-3 text-sm font-semibold text-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#B03060]/30"
+              >
+                {transactionTypeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="txAmount" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Amount</Label>
+              <Input
+                id="txAmount"
+                type="number"
+                min="1"
+                step="0.01"
+                value={txForm.amount}
+                onChange={(e) => setTxForm({ ...txForm, amount: e.target.value })}
+                disabled={isSavingTx}
+                required
+                className="rounded-xl border-[#B03060]/20 focus-visible:ring-[#B03060]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="txNotes" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notes</Label>
+              <Input
+                id="txNotes"
+                value={txForm.notes}
+                onChange={(e) => setTxForm({ ...txForm, notes: e.target.value })}
+                disabled={isSavingTx}
+                placeholder="Optional"
+                className="rounded-xl border-[#B03060]/20 focus-visible:ring-[#B03060]"
+              />
+            </div>
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={() => setEditingTx(null)} disabled={isSavingTx} className="rounded-xl">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSavingTx} className="rounded-xl bg-[#B03060] hover:bg-[#8B2548]">
+                {isSavingTx ? "Saving..." : "Save Transaction"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Transaction Modal */}
+      <Dialog open={!!deletingTx} onOpenChange={(open) => { if (!open && !isDeletingTx) setDeletingTx(null); }}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-[#1A1A1A]">Delete Transaction?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            This will remove <strong>{deletingTx ? formatTransactionType(deletingTx.type) : "this transaction"}</strong>
+            {deletingTx ? ` of ${formatCurrency(deletingTx.amount)}` : ""}. Member balances will be recalculated after deletion.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingTx(null)} disabled={isDeletingTx} className="rounded-xl">
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteTransaction} disabled={isDeletingTx} className="rounded-xl">
+              {isDeletingTx ? "Deleting..." : "Delete Transaction"}
             </Button>
           </DialogFooter>
         </DialogContent>

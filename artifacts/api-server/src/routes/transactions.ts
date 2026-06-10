@@ -157,6 +157,110 @@ router.post("/transactions", requireAdmin, async (req, res) => {
   }
 });
 
+// Admin-only: correct a transaction entered by mistake
+router.put("/transactions/:transactionId", requireAdmin, async (req, res) => {
+  try {
+    const { transactionId } = GetTransactionParams.parse({
+      transactionId: Number(req.params.transactionId),
+    });
+
+    const { type, amount, notes } = req.body as {
+      type?: string;
+      amount?: number;
+      notes?: string | null;
+    };
+
+    if (!type || !["SAVINGS_DEPOSIT", "LOAN_REPAYMENT", "LOAN_DISBURSEMENT", "WITHDRAWAL"].includes(type)) {
+      res.status(400).json({ error: "Valid transaction type is required" });
+      return;
+    }
+    if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) {
+      res.status(400).json({ error: "Amount must be a positive number" });
+      return;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(transactionsTable)
+      .where(eq(transactionsTable.id, transactionId));
+
+    if (!existing) {
+      res.status(404).json({ error: "Transaction not found" });
+      return;
+    }
+
+    const [updated] = await db
+      .update(transactionsTable)
+      .set({
+        type: type as any,
+        amount: String(amount),
+        notes: notes?.trim() ? notes.trim() : null,
+      })
+      .where(eq(transactionsTable.id, transactionId))
+      .returning();
+
+    const [member] = await db
+      .select()
+      .from(membersTable)
+      .where(eq(membersTable.id, updated.memberId));
+
+    const allTxs = await db
+      .select()
+      .from(transactionsTable)
+      .where(eq(transactionsTable.memberId, updated.memberId))
+      .orderBy(transactionsTable.createdAt);
+
+    let runningBalance = 0;
+    for (const t of allTxs) {
+      const amt = parseFloat(t.amount);
+      runningBalance += CREDIT_TYPES.includes(t.type as any) ? amt : -amt;
+      if (t.id === updated.id) break;
+    }
+
+    req.log.info({ transactionId, adminId: req.session.adminId }, "Transaction edited by admin");
+    res.json({
+      id: updated.id,
+      transactionRef: updated.transactionRef,
+      memberId: updated.memberId,
+      memberName: member?.name ?? "",
+      type: updated.type,
+      direction: CREDIT_TYPES.includes(updated.type as any) ? "credit" : "debit",
+      amount: parseFloat(updated.amount),
+      notes: updated.notes ?? undefined,
+      runningBalance,
+      createdAt: updated.createdAt.toISOString(),
+    });
+  } catch (err) {
+    req.log.error({ err }, "updateTransaction error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Admin-only: remove a transaction entered by mistake
+router.delete("/transactions/:transactionId", requireAdmin, async (req, res) => {
+  try {
+    const { transactionId } = GetTransactionParams.parse({
+      transactionId: Number(req.params.transactionId),
+    });
+
+    const [deleted] = await db
+      .delete(transactionsTable)
+      .where(eq(transactionsTable.id, transactionId))
+      .returning();
+
+    if (!deleted) {
+      res.status(404).json({ error: "Transaction not found" });
+      return;
+    }
+
+    req.log.info({ transactionId, adminId: req.session.adminId }, "Transaction deleted by admin");
+    res.json({ success: true });
+  } catch (err) {
+    req.log.error({ err }, "deleteTransaction error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Admin-only: repay a loan using the member's savings balance (atomic double-entry)
 router.post("/transactions/repay-from-savings", requireAdmin, async (req, res) => {
   try {

@@ -461,7 +461,12 @@ router.post("/auth/change-password", async (req, res): Promise<void> => {
   }
   const [admin] = await db.select().from(adminUsersTable).where(eq(adminUsersTable.id, req.session.adminId));
   if (!admin) { res.status(404).json({ error: "Admin account not found" }); return; }
-  const valid = await bcrypt.compare(currentPassword as string, admin.passwordHash);
+  const storedPasswordMatches = await bcrypt.compare(currentPassword as string, admin.passwordHash);
+  const stillUsingDefaultPassword = await bcrypt.compare("admin@1", admin.passwordHash);
+  const defaultAliasPasswordMatches =
+    stillUsingDefaultPassword &&
+    Array.from(ADMIN_LOGIN_ALIASES.values()).includes(currentPassword as string);
+  const valid = storedPasswordMatches || defaultAliasPasswordMatches;
   if (!valid) { res.status(401).json({ error: "Current password is incorrect" }); return; }
   const passwordHash = await bcrypt.hash(newPassword as string, 12);
   await db.update(adminUsersTable).set({ passwordHash, pinHash: null }).where(eq(adminUsersTable.id, req.session.adminId));

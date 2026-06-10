@@ -461,11 +461,6 @@ export function Login() {
                   {adminLoading ? "Verifying…" : "Sign In"}
                 </button>
 
-                <div className="text-center">
-                  <Link href="/forgot-password" className="text-sm text-[#B03060] hover:text-[#8B1A40] font-semibold transition-colors">
-                    Forgot your password?
-                  </Link>
-                </div>
               </form>
             )}
 
