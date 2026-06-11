@@ -1,14 +1,30 @@
 apply plugin: 'com.android.application'
 
+def bmmUploadStoreFile = findProperty("BMM_UPLOAD_STORE_FILE") ?: System.getenv("BMM_UPLOAD_STORE_FILE")
+def bmmUploadStorePassword = findProperty("BMM_UPLOAD_STORE_PASSWORD") ?: System.getenv("BMM_UPLOAD_STORE_PASSWORD")
+def bmmUploadKeyAlias = findProperty("BMM_UPLOAD_KEY_ALIAS") ?: System.getenv("BMM_UPLOAD_KEY_ALIAS")
+def bmmUploadKeyPassword = findProperty("BMM_UPLOAD_KEY_PASSWORD") ?: System.getenv("BMM_UPLOAD_KEY_PASSWORD")
+def hasBmmUploadSigning = bmmUploadStoreFile && bmmUploadStorePassword && bmmUploadKeyAlias && bmmUploadKeyPassword
+
 android {
     namespace = "com.bashmmoney.app"
     compileSdk = rootProject.ext.compileSdkVersion
+    signingConfigs {
+        release {
+            if (hasBmmUploadSigning) {
+                storeFile file(bmmUploadStoreFile)
+                storePassword bmmUploadStorePassword
+                keyAlias bmmUploadKeyAlias
+                keyPassword bmmUploadKeyPassword
+            }
+        }
+    }
     defaultConfig {
         applicationId "com.bashmmoney.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -18,6 +34,9 @@ android {
     }
     buildTypes {
         release {
+            if (hasBmmUploadSigning) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
